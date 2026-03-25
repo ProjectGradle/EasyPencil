@@ -30,8 +30,8 @@ public class Main extends Application {
         Scene scene = new Scene(root, w, h);
         scene.setFill(Color.TRANSPARENT);
         toolbar.setupShortcuts(scene);
-        
-        root.setFocusTraversable(true); 
+
+        root.setFocusTraversable(true);
         root.requestFocus();
 
         stage.setTitle("EasyPencil");

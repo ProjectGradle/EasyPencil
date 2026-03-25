@@ -48,7 +48,7 @@ public class HotkeySettings extends Stage {
             keyBtn.setOnAction(e -> {
                 keyBtn.setText("...");
                 keyBtn.setStyle("-fx-background-color: #E91E63; -fx-text-fill: white; -fx-min-width: 90;");
-                
+
                 keyBtn.setOnKeyPressed(keyEvent -> {
                     KeyCode newCode = keyEvent.getCode();
                     toolbar.setHotkey(tool, newCode); // อัปเดตค่ากลับไปที่ Toolbar
@@ -68,12 +68,12 @@ public class HotkeySettings extends Stage {
         doneBtn.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-padding: 8 25; -fx-background-radius: 20; -fx-cursor: hand;");
         // ในไฟล์ HotkeySettings.java ตรงปุ่ม Done
         doneBtn.setOnAction(e -> {
-        this.close();
-        // 🌟 บังคับให้หน้าจอหลักกลับมา Focus อีกครั้ง
-        if (toolbar.getScene() != null) {
-            toolbar.getScene().getRoot().requestFocus();
-        }
-    });
+            this.close();
+            // 🌟 บังคับให้หน้าจอหลักกลับมา Focus อีกครั้ง
+            if (toolbar.getScene() != null) {
+                toolbar.getScene().getRoot().requestFocus();
+            }
+        });
 
         root.getChildren().addAll(grid, doneBtn);
         this.setScene(new Scene(root));

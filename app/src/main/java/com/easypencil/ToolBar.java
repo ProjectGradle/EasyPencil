@@ -36,12 +36,12 @@ public class ToolBar extends VBox {
     private Label dragHandle;
     private ActionButton rotateBtn;
     private ToolButton toggleMode;
-    
+
     private ToolButton penBtn;
     private ToolButton highlightBtn;
     private ToolButton textBtn;
     private ToolButton eraserBtn;
-    
+
     private ActionButton undoBtn;
     private ActionButton clearBtn;
     private ActionButton saveBtn;
@@ -59,7 +59,7 @@ public class ToolBar extends VBox {
     public ToolBar(DrawingCanvas canvas, Stage stage) {
         setAlignment(Pos.TOP_LEFT);
         setPickOnBounds(false);
-        setPadding(new Insets(15)); 
+        setPadding(new Insets(15));
 
         // 1. ตั้งค่าคีย์ลัดเริ่มต้น
         initDefaultHotkeys();
@@ -68,12 +68,15 @@ public class ToolBar extends VBox {
         dragHandle = new Label("⣿");
         dragHandle.setTextFill(Color.web("#555555"));
         dragHandle.setStyle("-fx-font-size: 18px; -fx-cursor: move;");
-        
-        rotateBtn = new ActionButton("🔄", 
-            "-fx-background-color: transparent; -fx-text-fill: #999999; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;",
-            "-fx-background-color: #333333; -fx-text-fill: white; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;"
+
+        rotateBtn = new ActionButton("🔄",
+                "-fx-background-color: transparent; -fx-text-fill: #999999; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;",
+                "-fx-background-color: #333333; -fx-text-fill: white; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;"
         );
-        rotateBtn.setOnAction(e -> { isHorizontal = !isHorizontal; buildLayout(); });
+        rotateBtn.setOnAction(e -> {
+            isHorizontal = !isHorizontal;
+            buildLayout();
+        });
 
         toggleMode = new ToolButton("✏ Draw", null);
         toggleMode.setActive(true);
@@ -100,28 +103,42 @@ public class ToolBar extends VBox {
         setActiveTool(penBtn);
         canvas.setPenMode();
 
-        penBtn.setOnAction(e -> { setActiveTool(penBtn); canvas.setPenMode(); });
-        highlightBtn.setOnAction(e -> { setActiveTool(highlightBtn); canvas.setHighlightMode(); });
-        textBtn.setOnAction(e -> { setActiveTool(textBtn); canvas.setTextMode(); });
-        eraserBtn.setOnAction(e -> { setActiveTool(eraserBtn); canvas.setEraserMode(); });
+        penBtn.setOnAction(e -> {
+            setActiveTool(penBtn);
+            canvas.setPenMode();
+        });
+        highlightBtn.setOnAction(e -> {
+            setActiveTool(highlightBtn);
+            canvas.setHighlightMode();
+        });
+        textBtn.setOnAction(e -> {
+            setActiveTool(textBtn);
+            canvas.setTextMode();
+        });
+        eraserBtn.setOnAction(e -> {
+            setActiveTool(eraserBtn);
+            canvas.setEraserMode();
+        });
 
         // 4. ส่วนเลือกสีและขนาด
         colorLabel = new Label("Color");
         colorLabel.setTextFill(Color.web("#FFFFFF"));
         colorLabel.setStyle("-fx-font-size: 11px;");
 
-        colorPicker = new ColorPicker(Color.web("#E91E63")); 
+        colorPicker = new ColorPicker(Color.web("#E91E63"));
         colorPicker.setStyle("-fx-color-label-visible: false; -fx-background-color: #2b2b2b; -fx-background-radius: 20; -fx-cursor: hand;");
         colorPicker.setOnAction(e -> {
             canvas.setBrushColor(colorPicker.getValue());
-            if (canvas.isEraser()) penBtn.fire(); 
+            if (canvas.isEraser()) {
+                penBtn.fire();
+            }
         });
-        canvas.setBrushColor(colorPicker.getValue()); 
+        canvas.setBrushColor(colorPicker.getValue());
 
         sizeLabel = new Label("Size: 4");
         sizeLabel.setTextFill(Color.web("#FFFFFF"));
         sizeLabel.setStyle("-fx-font-size: 11px;");
-        sizeLabel.setPrefWidth(45); 
+        sizeLabel.setPrefWidth(45);
 
         sizeSlider = new Slider(1, 100, 4);
         sizeSlider.setPrefWidth(80);
@@ -144,7 +161,9 @@ public class ToolBar extends VBox {
             fileChooser.setTitle("Save Image As");
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Files", "*.png"));
             File file = fileChooser.showSaveDialog(stage);
-            if (file != null) canvas.saveAsPng(file);
+            if (file != null) {
+                canvas.saveAsPng(file);
+            }
         });
 
         settingsBtn = new ActionButton("⚙");
@@ -191,7 +210,7 @@ public class ToolBar extends VBox {
         Orientation sepOrientation;
 
         if (isHorizontal) {
-            HBox box = new HBox(6); 
+            HBox box = new HBox(6);
             box.setAlignment(Pos.CENTER_LEFT);
             container = box;
             sepOrientation = Orientation.VERTICAL;
@@ -240,29 +259,41 @@ public class ToolBar extends VBox {
 
     private Separator getStyledSeparator(Orientation orientation) {
         Separator sep = new Separator(orientation);
-        sep.setStyle("-fx-opacity: 0.15; -fx-background-color: #ffffff;"); 
+        sep.setStyle("-fx-opacity: 0.15; -fx-background-color: #ffffff;");
         return sep;
     }
 
     public void setupShortcuts(Scene scene) {
         scene.setOnKeyPressed(e -> {
             // ถ้ากำลังพิมพ์ในกล่องข้อความ ให้หยุดคีย์ลัด
-            if (e.getTarget() instanceof TextInputControl) return;
-            
+            if (e.getTarget() instanceof TextInputControl) {
+                return;
+            }
+
             // ถ้าหน้าต่างหลัก (Scene) ไม่ได้ถูก Focus อยู่ ก็ไม่ต้องทำงาน
-            if (!scene.getWindow().isFocused()) return;
+            if (!scene.getWindow().isFocused()) {
+                return;
+            }
 
             KeyCode code = e.getCode();
-            
+
             // ใช้ if-else เช็คปุ่มจาก Map เหมือนเดิม
-            if (code == hotkeys.get("PEN")) penBtn.fire();
-            else if (code == hotkeys.get("HIGHLIGHT")) highlightBtn.fire();
-            else if (code == hotkeys.get("TEXT")) textBtn.fire();
-            else if (code == hotkeys.get("ERASER")) eraserBtn.fire();
-            
+            if (code == hotkeys.get("PEN")) {
+                penBtn.fire(); 
+            }else if (code == hotkeys.get("HIGHLIGHT")) {
+                highlightBtn.fire(); 
+            }else if (code == hotkeys.get("TEXT")) {
+                textBtn.fire(); 
+            }else if (code == hotkeys.get("ERASER")) {
+                eraserBtn.fire();
+            }
+
             if (e.isControlDown()) {
-                if (code == hotkeys.get("UNDO")) undoBtn.fire();
-                else if (code == hotkeys.get("SAVE")) saveBtn.fire();
+                if (code == hotkeys.get("UNDO")) {
+                    undoBtn.fire(); 
+                }else if (code == hotkeys.get("SAVE")) {
+                    saveBtn.fire();
+                }
             }
         });
     }

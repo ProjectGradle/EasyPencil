@@ -17,10 +17,14 @@ public class ToolButton extends ToggleButton {
         this.setStyle(normalStyle());
         // จัดการ Hover Effect (เอาเมาส์ชี้แล้วสว่าง) ด้วยตัวเอง
         this.setOnMouseEntered(e -> {
-            if (!this.isSelected()) this.setStyle(hoverStyle());
+            if (!this.isSelected()) {
+                this.setStyle(hoverStyle());
+            }
         });
         this.setOnMouseExited(e -> {
-            if (!this.isSelected()) this.setStyle(normalStyle());
+            if (!this.isSelected()) {
+                this.setStyle(normalStyle());
+            }
         });
     }
 
@@ -31,17 +35,24 @@ public class ToolButton extends ToggleButton {
     }
 
     private void loadIcon(String fileName) {
-        if (fileName == null || fileName.isEmpty()) return;
+        if (fileName == null || fileName.isEmpty()) {
+            return;
+        }
         try {
-            String fullPath = "file:app/src/main/resources/asset/" + fileName;
-            Image img = new Image(fullPath);
+            java.net.URL resourceUrl = getClass().getResource("/asset/" + fileName);
+            if (resourceUrl == null) {
+                System.out.println("❌ ไม่พบไอคอน: " + fileName);
+                return;
+            }
+            Image img = new Image(resourceUrl.toExternalForm());
             ImageView view = new ImageView(img);
-            view.setFitWidth(16);  
-            view.setFitHeight(16); 
-            view.setPreserveRatio(true); 
+            view.setFitWidth(16);
+            view.setFitHeight(16);
+            view.setPreserveRatio(true);
             this.setGraphic(view);
+
         } catch (Exception e) {
-            System.out.println("❌ ไม่พบไอคอน: " + fileName);
+            System.out.println("❌ เกิดข้อผิดพลาดตอนโหลดไอคอน " + fileName + ": " + e.getMessage());
         }
     }
 
@@ -50,10 +61,12 @@ public class ToolButton extends ToggleButton {
         return "-fx-background-color: transparent; -fx-text-fill: #cccccc;"
                 + "-fx-background-radius: 20; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 6 12;";
     }
+
     private String hoverStyle() {
         return "-fx-background-color: #333333; -fx-text-fill: #ffffff;"
                 + "-fx-background-radius: 20; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 6 12;";
     }
+
     private String activeStyle() {
         return "-fx-background-color: #E91E63; -fx-text-fill: #ffffff;"
                 + "-fx-background-radius: 20; -fx-font-size: 12px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 6 12;"
