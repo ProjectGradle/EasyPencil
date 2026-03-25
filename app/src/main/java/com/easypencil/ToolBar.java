@@ -1,17 +1,24 @@
 package com.easypencil;
 
-
 import com.easypencil.Widget.ActionButton;
 import com.easypencil.Widget.ToolButton;
+import com.easypencil.Widget.HotkeySettings; // 🌟 เรียกใช้ Widget หน้าต่างตั้งค่า
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -25,11 +32,11 @@ public class ToolBar extends VBox {
     private double yOffset = 0;
     private boolean isHorizontal = true;
 
+    // UI Elements
     private Label dragHandle;
     private ActionButton rotateBtn;
     private ToolButton toggleMode;
     
-    // เรียกใช้ Widget ที่เราสร้างขึ้นมาใหม่!
     private ToolButton penBtn;
     private ToolButton highlightBtn;
     private ToolButton textBtn;
@@ -38,6 +45,7 @@ public class ToolBar extends VBox {
     private ActionButton undoBtn;
     private ActionButton clearBtn;
     private ActionButton saveBtn;
+    private ActionButton settingsBtn; // 🌟 ปุ่มเฟืองตั้งค่า
     private ActionButton closeBtn;
 
     private Label colorLabel;
@@ -45,23 +53,28 @@ public class ToolBar extends VBox {
     private Label sizeLabel;
     private Slider sizeSlider;
 
+    // 🌟 ระบบเก็บข้อมูลคีย์ลัด
+    private final Map<String, KeyCode> hotkeys = new HashMap<>();
+
     public ToolBar(DrawingCanvas canvas, Stage stage) {
         setAlignment(Pos.TOP_LEFT);
         setPickOnBounds(false);
         setPadding(new Insets(15)); 
 
+        // 1. ตั้งค่าคีย์ลัดเริ่มต้น
+        initDefaultHotkeys();
+
+        // 2. สร้างส่วนประกอบหลัก
         dragHandle = new Label("⣿");
         dragHandle.setTextFill(Color.web("#555555"));
         dragHandle.setStyle("-fx-font-size: 18px; -fx-cursor: move;");
         
-        // 🌟 เรียกใช้ ActionButton (ส่ง Custom CSS ไปให้ปุ่มหมุน)
         rotateBtn = new ActionButton("🔄", 
             "-fx-background-color: transparent; -fx-text-fill: #999999; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;",
             "-fx-background-color: #333333; -fx-text-fill: white; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;"
         );
         rotateBtn.setOnAction(e -> { isHorizontal = !isHorizontal; buildLayout(); });
 
-        // 🌟 เรียกใช้ ToolButton 
         toggleMode = new ToolButton("✏ Draw", null);
         toggleMode.setActive(true);
         toggleMode.setOnAction(e -> {
@@ -78,7 +91,7 @@ public class ToolBar extends VBox {
             }
         });
 
-        // 🌟 สร้างปุ่มพร้อมใส่ไอคอนได้ในบรรทัดเดียว! โค้ดสะอาดมาก 🌟
+        // 3. สร้างปุ่มเครื่องมือ (ToolButtons)
         penBtn = new ToolButton("Pen", "pencil.png");
         highlightBtn = new ToolButton("Highlight", "highlighter.png");
         textBtn = new ToolButton("Text", "text_icon.png");
@@ -92,6 +105,7 @@ public class ToolBar extends VBox {
         textBtn.setOnAction(e -> { setActiveTool(textBtn); canvas.setTextMode(); });
         eraserBtn.setOnAction(e -> { setActiveTool(eraserBtn); canvas.setEraserMode(); });
 
+        // 4. ส่วนเลือกสีและขนาด
         colorLabel = new Label("Color");
         colorLabel.setTextFill(Color.web("#FFFFFF"));
         colorLabel.setStyle("-fx-font-size: 11px;");
@@ -109,7 +123,7 @@ public class ToolBar extends VBox {
         sizeLabel.setStyle("-fx-font-size: 11px;");
         sizeLabel.setPrefWidth(45); 
 
-        sizeSlider = new Slider(1, 30, 4);
+        sizeSlider = new Slider(1, 100, 4);
         sizeSlider.setPrefWidth(80);
         sizeSlider.setStyle("-fx-cursor: hand;");
         sizeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
@@ -117,7 +131,7 @@ public class ToolBar extends VBox {
             sizeLabel.setText("Size: " + String.format("%.0f", newVal.doubleValue()));
         });
 
-        // 🌟 เรียกใช้ ActionButton ทั่วไป
+        // 5. ปุ่มคำสั่ง (ActionButtons)
         undoBtn = new ActionButton("↩ Undo");
         undoBtn.setOnAction(e -> canvas.undo());
 
@@ -133,7 +147,12 @@ public class ToolBar extends VBox {
             if (file != null) canvas.saveAsPng(file);
         });
 
-        // 🌟 เรียกใช้ ActionButton แบบ Custom สีแดง
+        settingsBtn = new ActionButton("⚙");
+        settingsBtn.setOnAction(e -> {
+            HotkeySettings settingsWindow = new HotkeySettings(this);
+            settingsWindow.showAndWait();
+        });
+
         closeBtn = new ActionButton("✕",
                 "-fx-background-color: transparent; -fx-text-fill: #ff4d4d; -fx-background-radius: 20; -fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 6 12;",
                 "-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-background-radius: 20; -fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 6 12;"
@@ -143,7 +162,23 @@ public class ToolBar extends VBox {
         buildLayout();
     }
 
-    // ฟังก์ชันจัดการปุ่มสว่างโคตรคลีน!
+    private void initDefaultHotkeys() {
+        hotkeys.put("PEN", KeyCode.P);
+        hotkeys.put("HIGHLIGHT", KeyCode.H);
+        hotkeys.put("TEXT", KeyCode.T);
+        hotkeys.put("ERASER", KeyCode.E);
+        hotkeys.put("UNDO", KeyCode.Z);
+        hotkeys.put("SAVE", KeyCode.S);
+    }
+
+    public void setHotkey(String toolName, KeyCode newKey) {
+        hotkeys.put(toolName.toUpperCase(), newKey);
+    }
+
+    public KeyCode getHotkey(String toolName) {
+        return hotkeys.get(toolName.toUpperCase());
+    }
+
     private void setActiveTool(ToolButton activeBtn) {
         ToolButton[] tools = {penBtn, highlightBtn, textBtn, eraserBtn};
         for (ToolButton btn : tools) {
@@ -195,7 +230,7 @@ public class ToolBar extends VBox {
                 toggleMode, getStyledSeparator(sepOrientation),
                 penBtn, highlightBtn, textBtn, eraserBtn, getStyledSeparator(sepOrientation),
                 colorLabel, colorPicker, sizeLabel, sizeSlider, getStyledSeparator(sepOrientation),
-                undoBtn, clearBtn, saveBtn, getStyledSeparator(sepOrientation),
+                undoBtn, clearBtn, saveBtn, settingsBtn, getStyledSeparator(sepOrientation),
                 closeBtn
         );
 
@@ -207,5 +242,28 @@ public class ToolBar extends VBox {
         Separator sep = new Separator(orientation);
         sep.setStyle("-fx-opacity: 0.15; -fx-background-color: #ffffff;"); 
         return sep;
+    }
+
+    public void setupShortcuts(Scene scene) {
+        scene.setOnKeyPressed(e -> {
+            // ถ้ากำลังพิมพ์ในกล่องข้อความ ให้หยุดคีย์ลัด
+            if (e.getTarget() instanceof TextInputControl) return;
+            
+            // ถ้าหน้าต่างหลัก (Scene) ไม่ได้ถูก Focus อยู่ ก็ไม่ต้องทำงาน
+            if (!scene.getWindow().isFocused()) return;
+
+            KeyCode code = e.getCode();
+            
+            // ใช้ if-else เช็คปุ่มจาก Map เหมือนเดิม
+            if (code == hotkeys.get("PEN")) penBtn.fire();
+            else if (code == hotkeys.get("HIGHLIGHT")) highlightBtn.fire();
+            else if (code == hotkeys.get("TEXT")) textBtn.fire();
+            else if (code == hotkeys.get("ERASER")) eraserBtn.fire();
+            
+            if (e.isControlDown()) {
+                if (code == hotkeys.get("UNDO")) undoBtn.fire();
+                else if (code == hotkeys.get("SAVE")) saveBtn.fire();
+            }
+        });
     }
 }
