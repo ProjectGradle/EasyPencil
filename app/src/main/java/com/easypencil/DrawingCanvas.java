@@ -8,6 +8,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
@@ -22,8 +23,14 @@ public class DrawingCanvas extends Pane {
     private double brushSize = 4.0;
     private boolean eraser = false;
 
+    // 🌟 เปลี่ยนตัวแปรให้คุมทั้งกล่อง Container (แถบจับลาก + ช่องพิมพ์)
     private boolean textMode = false;
+    private VBox activeTextContainer = null;
     private javafx.scene.control.TextArea activeTextArea = null;
+    
+    // ตัวแปรเก็บระยะลากเมาส์ของกล่องข้อความ
+    private double dragOffsetX = 0;
+    private double dragOffsetY = 0;
 
     public DrawingCanvas() {
         double w = javafx.stage.Screen.getPrimary().getBounds().getWidth();
@@ -45,11 +52,11 @@ public class DrawingCanvas extends Pane {
     private void setupMouseEvents() {
         canvas.setOnMousePressed(e -> {
             if (textMode) {
-                if (activeTextArea != null) {
-                    finalizeText();
+                if (activeTextContainer != null) {
+                    finalizeText(); // ถ้ามีกล่องอยู่แล้ว ให้ประทับตราซะ
                     return; 
                 }
-                createTextArea(e.getX(), e.getY());
+                createTextArea(e.getX(), e.getY()); // สร้างกล่องใหม่
                 return;
             }
 
@@ -95,11 +102,33 @@ public class DrawingCanvas extends Pane {
         }
     }
 
+    // 🌟 ระบบสร้างกล่องข้อความแบบมีแถบจับลาก 🌟
     private void createTextArea(double x, double y) {
+        activeTextContainer = new VBox();
+        activeTextContainer.setLayoutX(x);
+        activeTextContainer.setLayoutY(y - 24); // หักลบความสูงของแถบจับลาก
+
+        // 1. สร้างแถบจับลาก (Drag Handle)
+        javafx.scene.control.Label moveHandle = new javafx.scene.control.Label("✥ ลากตรงนี้เพื่อย้ายตำแหน่ง");
+        moveHandle.setStyle("-fx-background-color: rgba(41, 128, 185, 0.9); -fx-text-fill: white; -fx-padding: 3 8; -fx-cursor: move; -fx-font-size: 12px; -fx-background-radius: 6 6 0 0;");
+        moveHandle.setMinHeight(24);
+        moveHandle.setMaxHeight(24);
+        moveHandle.setMaxWidth(Double.MAX_VALUE); // ยืดให้กว้างเต็มกล่อง
+
+        // คำสั่งตอนคลิกและลากแถบสีฟ้า
+        moveHandle.setOnMousePressed(e -> {
+            dragOffsetX = e.getSceneX() - activeTextContainer.getLayoutX();
+            dragOffsetY = e.getSceneY() - activeTextContainer.getLayoutY();
+            e.consume(); // หยุดการส่ง event ไปให้ Canvas (เพื่อไม่ให้ประทับตรา)
+        });
+        moveHandle.setOnMouseDragged(e -> {
+            activeTextContainer.setLayoutX(e.getSceneX() - dragOffsetX);
+            activeTextContainer.setLayoutY(e.getSceneY() - dragOffsetY);
+            e.consume();
+        });
+
+        // 2. สร้างช่องพิมพ์ (TextArea)
         activeTextArea = new javafx.scene.control.TextArea();
-        activeTextArea.setLayoutX(x);
-        activeTextArea.setLayoutY(y - 10); 
-        
         activeTextArea.setWrapText(false); 
 
         String hexColor = String.format("#%02X%02X%02X",
@@ -114,7 +143,7 @@ public class DrawingCanvas extends Pane {
                 "-fx-background-color: transparent; " +
                 "-fx-text-fill: " + hexColor + "; " +
                 "-fx-font-size: " + fontSize + "px; " +
-                "-fx-border-color: #888; -fx-border-style: dashed;"
+                "-fx-border-color: #888; -fx-border-style: dashed; -fx-border-width: 0 1 1 1;"
         );
 
         javafx.scene.text.Text textMeasurer = new javafx.scene.text.Text();
@@ -139,22 +168,32 @@ public class DrawingCanvas extends Pane {
             }
         });
 
-        this.getChildren().add(activeTextArea);
+        // จับแถบสีฟ้าและช่องพิมพ์มารวมร่างกัน
+        activeTextContainer.getChildren().addAll(moveHandle, activeTextArea);
+        
+        this.getChildren().add(activeTextContainer);
         activeTextArea.requestFocus();
     }
 
+    // 🌟 ระบบประทับตราข้อความ 🌟
     private void finalizeText() {
-        if (activeTextArea != null && !activeTextArea.getText().trim().isEmpty()) {
+        if (activeTextArea != null && activeTextContainer != null && !activeTextArea.getText().trim().isEmpty()) {
             saveSnapshot(); 
             gc.setFill(brushColor);
             double fontSize = Math.max(16, brushSize * 4);
             gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, fontSize));
             
-            gc.fillText(activeTextArea.getText(), activeTextArea.getLayoutX() + 5, activeTextArea.getLayoutY() + fontSize);
+            // คำนวณพิกัดให้แม่นยำ (ชดเชยความสูงของแถบจับลาก 24px)
+            double stampX = activeTextContainer.getLayoutX() + 5;
+            double stampY = activeTextContainer.getLayoutY() + 24 + fontSize; 
+            
+            gc.fillText(activeTextArea.getText(), stampX, stampY);
         }
         
-        if (activeTextArea != null) {
-            this.getChildren().remove(activeTextArea);
+        // ลบกล่องและเคลียร์ตัวแปรทิ้ง
+        if (activeTextContainer != null) {
+            this.getChildren().remove(activeTextContainer);
+            activeTextContainer = null;
             activeTextArea = null;
         }
     }
@@ -163,7 +202,7 @@ public class DrawingCanvas extends Pane {
         this.textMode = isText;
         if (isText) {
             this.eraser = false;
-        } else if (activeTextArea != null) {
+        } else if (activeTextContainer != null) {
             finalizeText(); 
         }
     }
