@@ -9,6 +9,7 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -33,16 +34,19 @@ public class ToolBar extends VBox {
         toggleMode.setSelected(true);
         toggleMode.setStyle(selectedStyle());
         toggleMode.setOnAction(e -> {
+            Pane root = (Pane) canvas.getParent();
+
             if (toggleMode.isSelected()) {
                 toggleMode.setText("✏ Draw");
                 toggleMode.setStyle(selectedStyle());
                 canvas.setMouseTransparent(false);
-                Main.setDrawMode(true);
+                root.setStyle("-fx-background-color: rgba(255, 255, 255, 0.01);");
             } else {
                 toggleMode.setText("👁 View");
                 toggleMode.setStyle(normalStyle());
                 canvas.setMouseTransparent(true);
-                Main.setDrawMode(false);
+
+                root.setStyle("-fx-background-color: transparent;");
             }
         });
 
@@ -59,13 +63,16 @@ public class ToolBar extends VBox {
         sizeSlider.valueProperty().addListener((obs, oldVal, newVal)
                 -> canvas.setBrushSize(newVal.doubleValue())
         );
-
-        // Eraser
-        ToggleButton eraserBtn = new ToggleButton("⬜ Eraser");
+        ToggleButton eraserBtn = new ToggleButton("🧽 Eraser");
         eraserBtn.setStyle(normalStyle());
         eraserBtn.setOnAction(e -> {
-            canvas.setEraser(eraserBtn.isSelected());
-            eraserBtn.setStyle(eraserBtn.isSelected() ? selectedStyle() : normalStyle());
+            if (eraserBtn.isSelected()) {
+                eraserBtn.setStyle(selectedStyle());
+                canvas.setEraser(true);
+            } else {
+                eraserBtn.setStyle(normalStyle());
+                canvas.setEraser(false);
+            }
         });
 
         // Undo

@@ -25,7 +25,7 @@ public class Main extends Application {
         ToolBar toolbar = new ToolBar(canvas, stage);
 
         Pane root = new Pane(canvas, toolbar);
-        root.setStyle("-fx-background-color: transparent;");
+        root.setStyle("-fx-background-color: rgba(255, 255, 255, 0.01);");
 
         Scene scene = new Scene(root, w, h);
         scene.setFill(Color.TRANSPARENT);

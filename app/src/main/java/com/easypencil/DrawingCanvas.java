@@ -40,32 +40,35 @@ public class DrawingCanvas extends Pane {
 
     private void setupMouseEvents() {
         canvas.setOnMousePressed(e -> {
-            saveSnapshot();
-            gc.setStroke(brushColor);
-            gc.setLineWidth(brushSize);
+            saveSnapshot(); // บันทึกภาพก่อนเริ่มวาด/ลบ สำหรับ Undo
+
+            if (eraser) {
+                // เปิดโหมดลบ (ทำให้เส้นที่วาดกลายเป็นโปร่งใส)
+                gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.ADD);
+                gc.setLineWidth(brushSize * 4); // ปรับขนาดหัวยางลบให้ใหญ่กว่าปากกาปกติ
+            } else {
+                // เปิดโหมดวาดปกติ
+                gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.SRC_OVER);
+                gc.setStroke(brushColor);
+                gc.setLineWidth(brushSize);
+            }
+
             gc.beginPath();
             gc.moveTo(e.getX(), e.getY());
-            System.out.println("Mouse pressed: " + e.getX() + ", " + e.getY());
+            gc.stroke(); // ทำให้คลิกจุดเดียวแล้วเกิดรอย (ไม่ต้องลากก็ติด)
         });
 
         canvas.setOnMouseDragged(e -> {
-            if (eraser) {
-                gc.clearRect(
-                        e.getX() - brushSize * 2,
-                        e.getY() - brushSize * 2,
-                        brushSize * 4, brushSize * 4);
-            } else {
-                gc.setStroke(brushColor);
-                gc.setLineWidth(brushSize);
-                gc.lineTo(e.getX(), e.getY());
-                gc.stroke();
-                gc.beginPath();
-                gc.moveTo(e.getX(), e.getY());
-            }
-            System.out.println("Mouse dragged: " + e.getX() + ", " + e.getY());
+            // ลากเส้นไปตามเมาส์ (ใช้ได้ทั้งวาดและลบ เพราะเราตั้ง BlendMode ไว้แล้วตอน Click)
+            gc.lineTo(e.getX(), e.getY());
+            gc.stroke();
         });
 
-        canvas.setOnMouseReleased(e -> gc.closePath());
+        canvas.setOnMouseReleased(e -> {
+            gc.closePath();
+            // คืนค่าโหมดวาดกลับเป็นปกติ เผื่อไว้
+            gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.SRC_OVER);
+        });
     }
 
     private void saveSnapshot() {
