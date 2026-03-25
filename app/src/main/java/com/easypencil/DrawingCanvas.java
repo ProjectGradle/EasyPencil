@@ -1,11 +1,10 @@
 package com.easypencil;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.ArrayList;
+import java.util.List;
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
@@ -15,7 +14,9 @@ public class DrawingCanvas extends Pane {
 
     private final Canvas canvas;
     private final GraphicsContext gc;
-    private final Deque<WritableImage> undoStack = new ArrayDeque<>();
+
+    private final List<DrawAction> history = new ArrayList<>();
+    private DrawAction currentAction;
 
     private Color brushColor = Color.RED;
     private double brushSize = 4.0;
@@ -40,55 +41,113 @@ public class DrawingCanvas extends Pane {
 
     private void setupMouseEvents() {
         canvas.setOnMousePressed(e -> {
-            saveSnapshot(); // บันทึกภาพก่อนเริ่มวาด/ลบ สำหรับ Undo
+            currentAction = new DrawAction(brushColor, brushSize, eraser);
+            currentAction.addPoint(e.getX(), e.getY());
+            history.add(currentAction);
 
             if (eraser) {
-                // เปิดโหมดลบ (ทำให้เส้นที่วาดกลายเป็นโปร่งใส)
-                gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.ADD);
-                gc.setLineWidth(brushSize * 4); // ปรับขนาดหัวยางลบให้ใหญ่กว่าปากกาปกติ
+                // ลบจุดแรกที่คลิก
+                double size = brushSize * 4;
+                gc.clearRect(e.getX() - size / 2, e.getY() - size / 2, size, size);
             } else {
-                // เปิดโหมดวาดปกติ
-                gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.SRC_OVER);
                 gc.setStroke(brushColor);
                 gc.setLineWidth(brushSize);
+                gc.beginPath();
+                gc.moveTo(e.getX(), e.getY());
+                gc.stroke();
             }
-
-            gc.beginPath();
-            gc.moveTo(e.getX(), e.getY());
-            gc.stroke(); // ทำให้คลิกจุดเดียวแล้วเกิดรอย (ไม่ต้องลากก็ติด)
         });
 
         canvas.setOnMouseDragged(e -> {
-            // ลากเส้นไปตามเมาส์ (ใช้ได้ทั้งวาดและลบ เพราะเราตั้ง BlendMode ไว้แล้วตอน Click)
-            gc.lineTo(e.getX(), e.getY());
-            gc.stroke();
+            if (currentAction != null) {
+                currentAction.addPoint(e.getX(), e.getY());
+            }
+
+            if (eraser) {
+                // อัลกอริทึมถมช่องว่างของยางลบ: ทำให้เวลาลากเมาส์เร็วๆ รอยลบก็ยังเชื่อมต่อกันเนียนๆ
+                int lastIdx = currentAction.xPoints.size() - 2;
+                if (lastIdx >= 0) {
+                    double lastX = currentAction.xPoints.get(lastIdx);
+                    double lastY = currentAction.yPoints.get(lastIdx);
+                    double currentX = e.getX();
+                    double currentY = e.getY();
+                    double size = brushSize * 4;
+
+                    double distance = Math.hypot(currentX - lastX, currentY - lastY);
+                    int steps = Math.max(1, (int) distance);
+                    for (int i = 0; i <= steps; i++) {
+                        double interpX = lastX + (currentX - lastX) * ((double) i / steps);
+                        double interpY = lastY + (currentY - lastY) * ((double) i / steps);
+                        gc.clearRect(interpX - size / 2, interpY - size / 2, size, size);
+                    }
+                }
+            } else {
+                gc.lineTo(e.getX(), e.getY());
+                gc.stroke();
+            }
         });
 
         canvas.setOnMouseReleased(e -> {
-            gc.closePath();
-            // คืนค่าโหมดวาดกลับเป็นปกติ เผื่อไว้
-            gc.setGlobalBlendMode(javafx.scene.effect.BlendMode.SRC_OVER);
+            if (!eraser) {
+                gc.closePath();
+            }
         });
     }
 
-    private void saveSnapshot() {
-        WritableImage snapshot = canvas.snapshot(null, null);
-        undoStack.push(snapshot);
-        if (undoStack.size() > 30) {
-            undoStack.pollLast();
-        }
-    }
-
     public void undo() {
-        if (!undoStack.isEmpty()) {
-            gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-            gc.drawImage(undoStack.pop(), 0, 0);
+        if (!history.isEmpty()) {
+            history.remove(history.size() - 1);
+            redrawAll();
         }
     }
 
     public void clearCanvas() {
-        saveSnapshot();
+        history.clear();
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+    }
+
+    // วาดใหม่ทั้งหมดเพื่อทำ Undo (รองรับทั้งเส้นวาดยางลบ)
+    private void redrawAll() {
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        for (DrawAction action : history) {
+            if (action.xPoints.isEmpty()) {
+                continue;
+            }
+
+            if (action.eraser) {
+                double size = action.size * 4;
+                for (int j = 0; j < action.xPoints.size(); j++) {
+                    double x = action.xPoints.get(j);
+                    double y = action.yPoints.get(j);
+
+                    if (j > 0) {
+                        double lastX = action.xPoints.get(j - 1);
+                        double lastY = action.yPoints.get(j - 1);
+                        double distance = Math.hypot(x - lastX, y - lastY);
+                        int steps = Math.max(1, (int) distance);
+                        for (int i = 0; i <= steps; i++) {
+                            double interpX = lastX + (x - lastX) * ((double) i / steps);
+                            double interpY = lastY + (y - lastY) * ((double) i / steps);
+                            gc.clearRect(interpX - size / 2, interpY - size / 2, size, size);
+                        }
+                    } else {
+                        gc.clearRect(x - size / 2, y - size / 2, size, size);
+                    }
+                }
+            } else {
+                gc.setStroke(action.color);
+                gc.setLineWidth(action.size);
+                gc.beginPath();
+                gc.moveTo(action.xPoints.get(0), action.yPoints.get(0));
+
+                for (int i = 1; i < action.xPoints.size(); i++) {
+                    gc.lineTo(action.xPoints.get(i), action.yPoints.get(i));
+                }
+                gc.stroke();
+                gc.closePath();
+            }
+        }
     }
 
     public void setBrushColor(Color color) {
@@ -103,7 +162,24 @@ public class DrawingCanvas extends Pane {
         this.eraser = eraser;
     }
 
-    public boolean isEraser() {
-        return eraser;
+    // --- คลาสย่อยสำหรับเก็บข้อมูลแต่ละเส้น ---
+    private static class DrawAction {
+
+        Color color;
+        double size;
+        boolean eraser;
+        List<Double> xPoints = new ArrayList<>();
+        List<Double> yPoints = new ArrayList<>();
+
+        public DrawAction(Color color, double size, boolean eraser) {
+            this.color = color;
+            this.size = size;
+            this.eraser = eraser;
+        }
+
+        public void addPoint(double x, double y) {
+            xPoints.add(x);
+            yPoints.add(y);
+        }
     }
 }
