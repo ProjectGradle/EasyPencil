@@ -1,6 +1,7 @@
 package com.easypencil.Widget;
 
 import com.easypencil.ToolBar;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;

@@ -1,12 +1,12 @@
 package com.easypencil;
 
-import com.easypencil.Widget.ActionButton;
-import com.easypencil.Widget.ToolButton;
-import com.easypencil.Widget.HotkeySettings; // 🌟 เรียกใช้ Widget หน้าต่างตั้งค่า
-
 import java.io.File;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.Map; // 🌟 เรียกใช้ Widget หน้าต่างตั้งค่า
+
+import com.easypencil.Widget.ActionButton;
+import com.easypencil.Widget.HotkeySettings;
+import com.easypencil.Widget.ToolButton;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -18,7 +18,6 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -279,19 +278,19 @@ public class ToolBar extends VBox {
 
             // ใช้ if-else เช็คปุ่มจาก Map เหมือนเดิม
             if (code == hotkeys.get("PEN")) {
-                penBtn.fire(); 
-            }else if (code == hotkeys.get("HIGHLIGHT")) {
-                highlightBtn.fire(); 
-            }else if (code == hotkeys.get("TEXT")) {
-                textBtn.fire(); 
-            }else if (code == hotkeys.get("ERASER")) {
+                penBtn.fire();
+            } else if (code == hotkeys.get("HIGHLIGHT")) {
+                highlightBtn.fire();
+            } else if (code == hotkeys.get("TEXT")) {
+                textBtn.fire();
+            } else if (code == hotkeys.get("ERASER")) {
                 eraserBtn.fire();
             }
 
             if (e.isControlDown()) {
                 if (code == hotkeys.get("UNDO")) {
-                    undoBtn.fire(); 
-                }else if (code == hotkeys.get("SAVE")) {
+                    undoBtn.fire();
+                } else if (code == hotkeys.get("SAVE")) {
                     saveBtn.fire();
                 }
             }
