@@ -1,15 +1,11 @@
 package com.easypencil;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import java.awt.Robot;
-import java.awt.Rectangle;
-import java.awt.Toolkit;
-
-import javax.imageio.ImageIO;
+import com.easypencil.Widget.FloatingTextBox; // 🌟 เรียกใช้ Widget
+import com.easypencil.util.ScreenCaptureUtil;
 
 import javafx.scene.Cursor;
 import javafx.scene.ImageCursor;
@@ -19,7 +15,6 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
@@ -37,16 +32,13 @@ public class DrawingCanvas extends Pane {
     private boolean textMode = false;
     private boolean highlightMode = false; 
 
-    private VBox activeTextContainer = null;
-    private javafx.scene.control.TextArea activeTextArea = null;
-    private double dragOffsetX = 0;
-    private double dragOffsetY = 0;
+    // 🌟 ใช้ Widget ที่เราเพิ่งสร้าง แทนตัวแปรยุ่บยั่บแบบเก่า
+    private FloatingTextBox activeTextBox = null;
 
-    // 🌟 ตัวแปรสำหรับเก็บรูปเมาส์ (Cursors) 🌟
     private Cursor penCursor = Cursor.DEFAULT;
     private Cursor highlightCursor = Cursor.DEFAULT;
     private Cursor eraserCursor = Cursor.DEFAULT;
-    private Cursor textCursor = Cursor.TEXT; // ใช้เมาส์พิมพ์ข้อความแบบมาตรฐานของระบบ
+    private Cursor textCursor = Cursor.TEXT; 
 
     public DrawingCanvas() {
         double w = javafx.stage.Screen.getPrimary().getBounds().getWidth();
@@ -62,11 +54,10 @@ public class DrawingCanvas extends Pane {
 
         getChildren().add(canvas);
         
-        loadCursors(); // 🌟 โหลดรูปเมาส์ตอนเปิดโปรแกรม
+        loadCursors(); 
         setupMouseEvents();
     }
 
-    // 🌟 ฟังก์ชันสำหรับโหลดรูปลงมาเป็นเมาส์ 🌟
     private void loadCursors() {
         try {
             Image penImg = new Image("file:app/src/main/resources/asset/pencil.png");
@@ -80,9 +71,7 @@ public class DrawingCanvas extends Pane {
             
             Image eraserImg = new Image("file:app/src/main/resources/asset/eraser.png");
             eraserCursor = new ImageCursor(eraserImg, eraserImg.getWidth() / 2, eraserImg.getHeight() / 2);
-
         } catch (Exception e) {
-            System.out.println("Error Loading Cursors! Using default.");
             penCursor = Cursor.CROSSHAIR;
             highlightCursor = Cursor.CROSSHAIR;
             eraserCursor = Cursor.CLOSED_HAND;
@@ -92,11 +81,14 @@ public class DrawingCanvas extends Pane {
     private void setupMouseEvents() {
         canvas.setOnMousePressed(e -> {
             if (textMode) {
-                if (activeTextContainer != null) {
+                if (activeTextBox != null) {
                     finalizeText();
                     return; 
                 }
-                createTextArea(e.getX(), e.getY());
+                // 🌟 เรียกใช้ Widget FloatingTextBox
+                activeTextBox = new FloatingTextBox(e.getX(), e.getY(), brushColor, brushSize, this::finalizeText);
+                this.getChildren().add(activeTextBox);
+                activeTextBox.focusText();
                 return;
             }
 
@@ -123,18 +115,13 @@ public class DrawingCanvas extends Pane {
 
             if (eraser) {
                 gc.setGlobalAlpha(1.0);
-                gc.clearRect(
-                        e.getX() - brushSize * 2,
-                        e.getY() - brushSize * 2,
-                        brushSize * 4, brushSize * 4);
+                gc.clearRect(e.getX() - brushSize * 2, e.getY() - brushSize * 2, brushSize * 4, brushSize * 4);
             } else {
                 gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
                 gc.setGlobalAlpha(1.0);
                 gc.drawImage(undoStack.peek(), 0, 0);
 
-                if (highlightMode) {
-                    gc.setGlobalAlpha(0.4);
-                }
+                if (highlightMode) gc.setGlobalAlpha(0.4);
 
                 gc.lineTo(e.getX(), e.getY());
                 gc.stroke();
@@ -142,9 +129,7 @@ public class DrawingCanvas extends Pane {
         });
 
         canvas.setOnMouseReleased(e -> {
-            if (!textMode) {
-                gc.closePath();
-            }
+            if (!textMode) gc.closePath();
         });
     }
 
@@ -153,129 +138,50 @@ public class DrawingCanvas extends Pane {
         params.setFill(Color.TRANSPARENT); 
         WritableImage snapshot = canvas.snapshot(params, null);
         undoStack.push(snapshot);
-        if (undoStack.size() > 30) {
-            undoStack.pollLast();
-        }
+        if (undoStack.size() > 30) undoStack.pollLast();
     }
 
-    private void createTextArea(double x, double y) {
-        activeTextContainer = new VBox();
-        activeTextContainer.setLayoutX(x);
-        activeTextContainer.setLayoutY(y - 24); 
-
-        javafx.scene.control.Label moveHandle = new javafx.scene.control.Label("✥ ลากตรงนี้เพื่อย้ายตำแหน่ง");
-        moveHandle.setStyle("-fx-background-color: rgba(41, 128, 185, 0.9); -fx-text-fill: white; -fx-padding: 3 8; -fx-cursor: move; -fx-font-size: 12px; -fx-background-radius: 6 6 0 0;");
-        moveHandle.setMinHeight(24);
-        moveHandle.setMaxHeight(24);
-        moveHandle.setMaxWidth(Double.MAX_VALUE); 
-
-        moveHandle.setOnMousePressed(e -> {
-            dragOffsetX = e.getSceneX() - activeTextContainer.getLayoutX();
-            dragOffsetY = e.getSceneY() - activeTextContainer.getLayoutY();
-            e.consume(); 
-        });
-        moveHandle.setOnMouseDragged(e -> {
-            activeTextContainer.setLayoutX(e.getSceneX() - dragOffsetX);
-            activeTextContainer.setLayoutY(e.getSceneY() - dragOffsetY);
-            e.consume();
-        });
-
-        activeTextArea = new javafx.scene.control.TextArea();
-        activeTextArea.setWrapText(false); 
-
-        String hexColor = String.format("#%02X%02X%02X",
-                (int) (brushColor.getRed() * 255),
-                (int) (brushColor.getGreen() * 255),
-                (int) (brushColor.getBlue() * 255));
-
-        double fontSize = Math.max(16, brushSize * 4);
-
-        activeTextArea.setStyle(
-                "-fx-control-inner-background: rgba(255,255,255,0.8); " +
-                "-fx-background-color: transparent; " +
-                "-fx-text-fill: " + hexColor + "; " +
-                "-fx-font-size: " + fontSize + "px; " +
-                "-fx-border-color: #888; -fx-border-style: dashed; -fx-border-width: 0 1 1 1;"
-        );
-
-        javafx.scene.text.Text textMeasurer = new javafx.scene.text.Text();
-        textMeasurer.setFont(javafx.scene.text.Font.font("System", fontSize));
-
-        double initialWidth = fontSize * 3;
-        double initialHeight = fontSize * 2.5;
-        activeTextArea.setPrefWidth(initialWidth);
-        activeTextArea.setPrefHeight(initialHeight);
-
-        activeTextArea.textProperty().addListener((obs, oldText, newText) -> {
-            textMeasurer.setText(newText.isEmpty() ? "A" : newText);
-            double newWidth = textMeasurer.getLayoutBounds().getWidth() + 35;
-            double newHeight = textMeasurer.getLayoutBounds().getHeight() + 25;
-            activeTextArea.setPrefWidth(Math.max(initialWidth, newWidth));
-            activeTextArea.setPrefHeight(Math.max(initialHeight, newHeight));
-        });
-
-        activeTextArea.setOnKeyPressed(e -> {
-            if (e.isControlDown() && e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                finalizeText();
-            }
-        });
-
-        activeTextContainer.getChildren().addAll(moveHandle, activeTextArea);
-        this.getChildren().add(activeTextContainer);
-        activeTextArea.requestFocus();
-    }
-
+    // 🌟 ฟังก์ชันประทับตราข้อความ เล็กและสะอาดขึ้นมาก
     private void finalizeText() {
-        if (activeTextArea != null && activeTextContainer != null && !activeTextArea.getText().trim().isEmpty()) {
+        if (activeTextBox != null && !activeTextBox.getText().trim().isEmpty()) {
             saveSnapshot(); 
             gc.setGlobalAlpha(1.0); 
             gc.setFill(brushColor);
             double fontSize = Math.max(16, brushSize * 4);
             gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, fontSize));
             
-            double stampX = activeTextContainer.getLayoutX() + 5;
-            double stampY = activeTextContainer.getLayoutY() + 24 + fontSize; 
-            
-            gc.fillText(activeTextArea.getText(), stampX, stampY);
+            // ดึงพิกัดจาก Widget มาประทับตรา
+            gc.fillText(activeTextBox.getText(), activeTextBox.getStampX(), activeTextBox.getStampY());
         }
         
-        if (activeTextContainer != null) {
-            this.getChildren().remove(activeTextContainer);
-            activeTextContainer = null;
-            activeTextArea = null;
+        if (activeTextBox != null) {
+            this.getChildren().remove(activeTextBox);
+            activeTextBox = null;
         }
     }
 
-    // 🌟 อัปเดตฟังก์ชันเหล่านี้ให้สั่งเปลี่ยนเมาส์ด้วย 🌟
+    // --- การสลับโหมดเครื่องมือ ---
     public void setPenMode() {
-        this.textMode = false;
-        this.eraser = false;
-        this.highlightMode = false;
-        this.setCursor(penCursor); // เปลี่ยนรูปเมาส์
-        if (activeTextContainer != null) finalizeText();
+        this.textMode = false; this.eraser = false; this.highlightMode = false;
+        this.setCursor(penCursor); 
+        if (activeTextBox != null) finalizeText();
     }
 
     public void setHighlightMode() {
-        this.textMode = false;
-        this.eraser = false;
-        this.highlightMode = true;
-        this.setCursor(highlightCursor); // เปลี่ยนรูปเมาส์
-        if (activeTextContainer != null) finalizeText();
+        this.textMode = false; this.eraser = false; this.highlightMode = true;
+        this.setCursor(highlightCursor); 
+        if (activeTextBox != null) finalizeText();
     }
 
     public void setTextMode() {
-        this.textMode = true;
-        this.eraser = false;
-        this.highlightMode = false;
-        this.setCursor(textCursor); // เปลี่ยนรูปเมาส์ (ใช้แบบพิมพ์ข้อความมาตรฐาน)
+        this.textMode = true; this.eraser = false; this.highlightMode = false;
+        this.setCursor(textCursor); 
     }
 
     public void setEraserMode() {
-        this.textMode = false;
-        this.eraser = true;
-        this.highlightMode = false;
-        this.setCursor(eraserCursor); // เปลี่ยนรูปเมาส์
-        if (activeTextContainer != null) finalizeText();
+        this.textMode = false; this.eraser = true; this.highlightMode = false;
+        this.setCursor(eraserCursor); 
+        if (activeTextBox != null) finalizeText();
     }
 
     public void undo() {
@@ -291,43 +197,12 @@ public class DrawingCanvas extends Pane {
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
     }
 
-    public void setBrushColor(Color color) {
-        this.brushColor = color;
-    }
+    public void setBrushColor(Color color) { this.brushColor = color; }
+    public void setBrushSize(double size) { this.brushSize = size; }
+    public boolean isEraser() { return eraser; }
 
-    public void setBrushSize(double size) {
-        this.brushSize = size;
-    }
-
-    public boolean isEraser() {
-        return eraser;
-    }
-
-    // 🌟 ฟังก์ชันบันทึกรูปภาพ (Save หน้า Desktop + รอยวาด) 🌟
+    // 🌟 เรียกใช้ Utility Class ในบรรทัดเดียว!
     public void saveAsPng(File file) {
-        // ประทับตราข้อความก่อนเซฟ (ถ้ามีค้างไว้)
-        if (activeTextContainer != null) {
-            finalizeText();
-        }
-
-        try {
-            // 🌟 สร้างหุ่นยนต์ (Robot) เพื่อทำหน้าที่ถ่ายภาพทั้งหน้าจอ
-            Robot robot = new Robot();
-            
-            // 🌟 ดึงขนาดความกว้าง/สูง ของหน้าจอคอมพิวเตอร์แบบเต็มจอ
-            Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-            
-            // 🌟 สั่งแคปเจอร์หน้าจอ (ได้ภาพ Desktop + ลายเส้น + แถบเครื่องมือ ครบเลย)
-            BufferedImage screenFullImage = robot.createScreenCapture(screenRect);
-
-            // บันทึกเป็นไฟล์ .png
-            ImageIO.write(screenFullImage, "png", file);
-            System.out.println("✅ บันทึกภาพหน้าจอสำเร็จ: " + file.getAbsolutePath());
-            
-        } catch (Exception ex) {
-            System.err.println("❌ ไม่สามารถบันทึกภาพหน้าจอได้: " + ex.getMessage());
-        }
+        ScreenCaptureUtil.saveScreenAsPng(file, this::finalizeText);
     }
-
-    
 }
