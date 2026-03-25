@@ -17,20 +17,17 @@ import javafx.stage.Stage;
 
 public class ToolBar extends VBox {
 
-    // ตัวแปรสำหรับ Drag & Drop
     private double xOffset = 0;
     private double yOffset = 0;
-    
-    // สถานะแนวนอน / แนวตั้ง
     private boolean isHorizontal = true;
 
-    // ชิ้นส่วน UI
     private Label dragHandle;
     private Button rotateBtn;
     private ToggleButton toggleMode;
     
-    // 🌟 เปลี่ยนจาก MenuButton มาเป็น ToggleButton 3 ตัว 🌟
+    // 🌟 เครื่องมือทั้ง 4 แบบ 🌟
     private ToggleButton penBtn;
+    private ToggleButton highlightBtn;
     private ToggleButton textBtn;
     private ToggleButton eraserBtn;
     
@@ -75,72 +72,50 @@ public class ToolBar extends VBox {
             }
         });
 
-        // 🌟 สร้าง 3 ปุ่มเครื่องมือ 🌟
+        // สร้างปุ่มเครื่องมือ
         penBtn = new ToggleButton("✏ Pen");
+        highlightBtn = new ToggleButton("🖍 Highlight");
         textBtn = new ToggleButton("🔤 Text");
         eraserBtn = new ToggleButton("⬜ Eraser");
 
-        // ตั้งค่าให้ปุ่ม Pen ถูกเลือกเป็นค่าเริ่มต้น
-        penBtn.setSelected(true);
-        penBtn.setStyle(selectedStyle());
-        textBtn.setStyle(normalStyle());
-        eraserBtn.setStyle(normalStyle());
+        // กำหนดปุ่มเริ่มต้น
+        setActiveTool(penBtn);
+        canvas.setPenMode();
 
-        // กำหนดการทำงาน: เมื่อกดปุ่มใดปุ่มหนึ่ง ให้ปุ่มอื่นยกเลิกการเลือก
+        // 🌟 ตั้งค่าการกดปุ่มให้สลับโหมด 🌟
         penBtn.setOnAction(e -> {
-            penBtn.setSelected(true); // บังคับให้เป็นสถานะกดลงเสมอ
-            penBtn.setStyle(selectedStyle());
-            
-            textBtn.setSelected(false);
-            textBtn.setStyle(normalStyle());
-            
-            eraserBtn.setSelected(false);
-            eraserBtn.setStyle(normalStyle());
-            
-            canvas.setTextMode(false);
-            canvas.setEraser(false);
+            setActiveTool(penBtn);
+            canvas.setPenMode();
+        });
+
+        highlightBtn.setOnAction(e -> {
+            setActiveTool(highlightBtn);
+            canvas.setHighlightMode();
         });
 
         textBtn.setOnAction(e -> {
-            textBtn.setSelected(true);
-            textBtn.setStyle(selectedStyle());
-            
-            penBtn.setSelected(false);
-            penBtn.setStyle(normalStyle());
-            
-            eraserBtn.setSelected(false);
-            eraserBtn.setStyle(normalStyle());
-            
-            canvas.setTextMode(true);
-            canvas.setEraser(false);
+            setActiveTool(textBtn);
+            canvas.setTextMode();
         });
 
         eraserBtn.setOnAction(e -> {
-            eraserBtn.setSelected(true);
-            eraserBtn.setStyle(selectedStyle());
-            
-            penBtn.setSelected(false);
-            penBtn.setStyle(normalStyle());
-            
-            textBtn.setSelected(false);
-            textBtn.setStyle(normalStyle());
-            
-            canvas.setTextMode(false);
-            canvas.setEraser(true);
+            setActiveTool(eraserBtn);
+            canvas.setEraserMode();
         });
 
         colorLabel = new Label("Color:");
         colorLabel.setTextFill(Color.WHITE);
 
-        colorPicker = new ColorPicker(Color.RED);
+        // สีเริ่มต้นสำหรับปากกา และ ไฮไลท์
+        colorPicker = new ColorPicker(Color.YELLOW); 
         colorPicker.setStyle("-fx-color-label-visible: false;");
         colorPicker.setOnAction(e -> {
             canvas.setBrushColor(colorPicker.getValue());
-            // ถ้าไปเปลี่ยนสีตอนใช้ยางลบอยู่ โปรแกรมจะจำลองการกดปุ่มปากกาให้อัตโนมัติ
             if (canvas.isEraser()) {
-                penBtn.fire(); 
+                penBtn.fire(); // เด้งกลับมาหน้าปากกาถ้าเปลี่ยนสีตอนใช้ยางลบ
             }
         });
+        canvas.setBrushColor(colorPicker.getValue()); // ส่งค่าเริ่มต้นไปให้ Canvas
 
         sizeLabel = new Label("Size:");
         sizeLabel.setTextFill(Color.WHITE);
@@ -167,6 +142,20 @@ public class ToolBar extends VBox {
         closeBtn.setOnAction(e -> stage.close());
 
         buildLayout();
+    }
+
+    // ฟังก์ชันช่วยจัดการสีปุ่ม (ลดโค้ดซ้ำซ้อน)
+    private void setActiveTool(ToggleButton activeBtn) {
+        ToggleButton[] tools = {penBtn, highlightBtn, textBtn, eraserBtn};
+        for (ToggleButton btn : tools) {
+            if (btn == activeBtn) {
+                btn.setSelected(true);
+                btn.setStyle(selectedStyle());
+            } else {
+                btn.setSelected(false);
+                btn.setStyle(normalStyle());
+            }
+        }
     }
 
     private void buildLayout() {
@@ -210,8 +199,7 @@ public class ToolBar extends VBox {
                 new Separator(sepOrientation),
                 toggleMode, 
                 new Separator(sepOrientation),
-                // 🌟 นำปุ่มทั้ง 3 มาเรียงต่อกัน 🌟
-                penBtn, textBtn, eraserBtn, 
+                penBtn, highlightBtn, textBtn, eraserBtn, // <--- นำ 4 ปุ่มมาเรียงกัน
                 new Separator(sepOrientation),
                 colorLabel, colorPicker, sizeLabel, sizeSlider, 
                 new Separator(sepOrientation),
