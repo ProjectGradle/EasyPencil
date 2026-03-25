@@ -1,7 +1,15 @@
 package com.easypencil;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
+
+import java.awt.Robot;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+
+import javax.imageio.ImageIO;
 
 import javafx.scene.Cursor;
 import javafx.scene.ImageCursor;
@@ -294,4 +302,32 @@ public class DrawingCanvas extends Pane {
     public boolean isEraser() {
         return eraser;
     }
+
+    // 🌟 ฟังก์ชันบันทึกรูปภาพ (Save หน้า Desktop + รอยวาด) 🌟
+    public void saveAsPng(File file) {
+        // ประทับตราข้อความก่อนเซฟ (ถ้ามีค้างไว้)
+        if (activeTextContainer != null) {
+            finalizeText();
+        }
+
+        try {
+            // 🌟 สร้างหุ่นยนต์ (Robot) เพื่อทำหน้าที่ถ่ายภาพทั้งหน้าจอ
+            Robot robot = new Robot();
+            
+            // 🌟 ดึงขนาดความกว้าง/สูง ของหน้าจอคอมพิวเตอร์แบบเต็มจอ
+            Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+            
+            // 🌟 สั่งแคปเจอร์หน้าจอ (ได้ภาพ Desktop + ลายเส้น + แถบเครื่องมือ ครบเลย)
+            BufferedImage screenFullImage = robot.createScreenCapture(screenRect);
+
+            // บันทึกเป็นไฟล์ .png
+            ImageIO.write(screenFullImage, "png", file);
+            System.out.println("✅ บันทึกภาพหน้าจอสำเร็จ: " + file.getAbsolutePath());
+            
+        } catch (Exception ex) {
+            System.err.println("❌ ไม่สามารถบันทึกภาพหน้าจอได้: " + ex.getMessage());
+        }
+    }
+
+    
 }

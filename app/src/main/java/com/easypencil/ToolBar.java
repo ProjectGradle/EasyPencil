@@ -1,5 +1,7 @@
 package com.easypencil;
 
+import java.io.File;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -15,6 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ToolBar extends VBox {
@@ -38,6 +41,7 @@ public class ToolBar extends VBox {
     private Slider sizeSlider;
     private Button undoBtn;
     private Button clearBtn;
+    private Button saveBtn;
     private Button closeBtn;
 
     public ToolBar(DrawingCanvas canvas, Stage stage) {
@@ -158,6 +162,18 @@ public class ToolBar extends VBox {
         styleActionBtn(clearBtn);
         clearBtn.setOnAction(e -> canvas.clearCanvas());
 
+        saveBtn = new Button("💾 Save");
+        styleActionBtn(saveBtn);
+        saveBtn.setOnAction(e -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Save Image As");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Files", "*.png"));
+            File file = fileChooser.showSaveDialog(stage);
+            if (file != null) {
+                canvas.saveAsPng(file);
+            }
+        });
+
         closeBtn = new Button("✕");
         closeBtn.setStyle(
                 "-fx-background-color: transparent; -fx-text-fill: #ff4d4d;"
@@ -235,7 +251,7 @@ public class ToolBar extends VBox {
                 getStyledSeparator(sepOrientation),
                 colorLabel, colorPicker, sizeLabel, sizeSlider, 
                 getStyledSeparator(sepOrientation),
-                undoBtn, clearBtn, 
+                undoBtn, clearBtn, saveBtn, 
                 getStyledSeparator(sepOrientation),
                 closeBtn
         );
