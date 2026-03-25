@@ -16,50 +16,69 @@ import javafx.stage.StageStyle;
 public class HotkeySettings extends Stage {
 
     public HotkeySettings(ToolBar toolbar) {
-        // 🌟 1. แก้ปัญหาค้าง: ระบุเจ้าของหน้าต่างและสั่งให้ลอยบนสุด (Always on Top)
+        // 🌟 ตั้งค่าให้หน้าต่างอยู่เหนือหน้าวาดรูปเสมอ (กันค้าง)
         if (toolbar.getScene() != null) {
             this.initOwner(toolbar.getScene().getWindow());
         }
         this.setAlwaysOnTop(true); 
         this.initModality(Modality.APPLICATION_MODAL);
         this.initStyle(StageStyle.UTILITY);
-        this.setTitle("Hotkey Settings");
+        this.setTitle("Settings");
 
-        VBox root = new VBox(15);
+        // 🎨 ดึงสถานะธีมปัจจุบันจาก Toolbar มาใช้จัดสีหน้าต่างนี้
+        boolean isDark = toolbar.isDarkMode();
+        String bgColor = isDark ? "#1a1a1a" : "#ffffff";
+        String textColor = isDark ? "white" : "#333333";
+        String btnBase = isDark ? "#333333" : "#eeeeee";
+
+        VBox root = new VBox(20);
         root.setPadding(new Insets(20));
         root.setAlignment(Pos.CENTER);
-        // ใช้สีดำเข้มตามที่คุณส่งมา
-        root.setStyle("-fx-background-color: #1a1a1a; -fx-border-color: #333; -fx-border-width: 1;");
+        root.setStyle("-fx-background-color: " + bgColor + "; -fx-border-color: #444; -fx-border-width: 1;");
 
         GridPane grid = new GridPane();
         grid.setHgap(15);
-        grid.setVgap(10);
+        grid.setVgap(12);
         grid.setAlignment(Pos.CENTER);
 
-        // รายการคำสั่ง
+        // 🌙 1. ส่วนสลับธีม (Theme Toggle)
+        Label themeLabel = new Label("Theme:");
+        themeLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-weight: bold;");
+        
+        Button themeBtn = new Button(isDark ? "🌙 Dark Mode" : "☀️ Light Mode");
+        themeBtn.setStyle("-fx-background-color: " + btnBase + "; -fx-text-fill: " + textColor + "; -fx-min-width: 120; -fx-cursor: hand;");
+        
+        themeBtn.setOnAction(e -> {
+            toolbar.toggleTheme(); // 🌟 สั่ง Toolbar หลักเปลี่ยนสี
+            this.close();          // 🌟 ปิดหน้าต่างนี้
+            // 🌟 เปิดหน้าต่างใหม่ทันที เพื่อให้ UI หน้า Setting เปลี่ยนสีตามธีมใหม่ด้วย
+            new HotkeySettings(toolbar).show(); 
+        });
+
+        grid.add(themeLabel, 0, 0);
+        grid.add(themeBtn, 1, 0);
+
+        // ⌨️ 2. ส่วนตั้งค่า Hotkeys (เริ่มที่ row 1)
         String[] tools = {"PEN", "HIGHLIGHT", "TEXT", "ERASER", "UNDO", "SAVE"};
-        int row = 0;
+        int row = 1;
 
         for (String tool : tools) {
             Label nameLabel = new Label(tool + ":");
-            nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+            nameLabel.setStyle("-fx-text-fill: " + textColor + ";");
 
-            // ดึง Key ปัจจุบันจาก Toolbar มาโชว์
             Button keyBtn = new Button(toolbar.getHotkey(tool).toString());
-            keyBtn.setStyle("-fx-background-color: #333; -fx-text-fill: #E91E63; -fx-min-width: 90; -fx-background-radius: 5; -fx-cursor: hand;");
+            keyBtn.setStyle("-fx-background-color: " + btnBase + "; -fx-text-fill: #E91E63; -fx-min-width: 120; -fx-font-weight: bold; -fx-cursor: hand;");
 
-            // 🌟 ระบบดักจับการกดปุ่ม (Key Listener)
             keyBtn.setOnAction(e -> {
-                keyBtn.setText("...");
-                keyBtn.setStyle("-fx-background-color: #E91E63; -fx-text-fill: white; -fx-min-width: 90;");
+                keyBtn.setText("Press Key...");
+                keyBtn.setStyle("-fx-background-color: #E91E63; -fx-text-fill: white; -fx-min-width: 120;");
                 
                 keyBtn.setOnKeyPressed(keyEvent -> {
                     KeyCode newCode = keyEvent.getCode();
-                    toolbar.setHotkey(tool, newCode); // อัปเดตค่ากลับไปที่ Toolbar
+                    toolbar.setHotkey(tool, newCode);
                     keyBtn.setText(newCode.toString());
-                    keyBtn.setStyle("-fx-background-color: #333; -fx-text-fill: #E91E63; -fx-min-width: 90;");
+                    keyBtn.setStyle("-fx-background-color: " + btnBase + "; -fx-text-fill: #E91E63; -fx-min-width: 120;");
                     
-                    // 🌟 สำคัญ: ป้องกันไม่ให้ Key หลุดไปทำงานที่หน้า Canvas หลัก
                     keyEvent.consume(); 
                     keyBtn.setOnKeyPressed(null);
                 });
@@ -70,12 +89,10 @@ public class HotkeySettings extends Stage {
             row++;
         }
 
-        // ปุ่มปิด
+        // ปุ่ม Done
         Button doneBtn = new Button("Save & Close");
-        doneBtn.setStyle("-fx-background-color: #444; -fx-text-fill: white; -fx-padding: 8 25; -fx-background-radius: 20; -fx-cursor: hand;");
-        
+        doneBtn.setStyle("-fx-background-color: #E91E63; -fx-text-fill: white; -fx-padding: 8 25; -fx-background-radius: 20; -fx-cursor: hand;");
         doneBtn.setOnAction(e -> {
-            // 🌟 บังคับให้หน้าจอหลักกลับมา Focus อีกครั้ง
             if (toolbar.getScene() != null) {
                 toolbar.getScene().getRoot().requestFocus();
             }
@@ -84,8 +101,8 @@ public class HotkeySettings extends Stage {
 
         root.getChildren().addAll(grid, doneBtn);
         
-        // 🌟 แถม: กดปุ่ม ESC เพื่อปิดหน้าต่างนี้ได้ด้วย
         Scene scene = new Scene(root);
+        // กด ESC เพื่อปิด
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) doneBtn.fire();
         });

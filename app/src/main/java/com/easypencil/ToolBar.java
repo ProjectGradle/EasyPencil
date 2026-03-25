@@ -2,7 +2,7 @@ package com.easypencil;
 
 import com.easypencil.Widget.ActionButton;
 import com.easypencil.Widget.ToolButton;
-import com.easypencil.Widget.HotkeySettings; // 🌟 เรียกใช้ Widget หน้าต่างตั้งค่า
+import com.easypencil.Widget.HotkeySettings;
 
 import java.io.File;
 import java.util.HashMap;
@@ -31,9 +31,8 @@ public class ToolBar extends VBox {
     private double xOffset = 0;
     private double yOffset = 0;
     private boolean isHorizontal = true;
-    private boolean isDarkMode = true; // เริ่มต้นที่สีดำแบบ Epic Pen
+    private boolean isDarkMode = true; // 🌟 สถานะธีมปัจจุบัน
 
-    // UI Elements
     private Label dragHandle;
     private ActionButton rotateBtn;
     private ToolButton toggleMode;
@@ -46,7 +45,7 @@ public class ToolBar extends VBox {
     private ActionButton undoBtn;
     private ActionButton clearBtn;
     private ActionButton saveBtn;
-    private ActionButton settingsBtn; // 🌟 ปุ่มเฟืองตั้งค่า
+    private ActionButton settingsBtn;
     private ActionButton closeBtn;
 
     private Label colorLabel;
@@ -54,7 +53,6 @@ public class ToolBar extends VBox {
     private Label sizeLabel;
     private Slider sizeSlider;
 
-    // 🌟 ระบบเก็บข้อมูลคีย์ลัด
     private final Map<String, KeyCode> hotkeys = new HashMap<>();
 
     public ToolBar(DrawingCanvas canvas, Stage stage) {
@@ -62,13 +60,10 @@ public class ToolBar extends VBox {
         setPickOnBounds(false);
         setPadding(new Insets(15)); 
 
-        // 1. ตั้งค่าคีย์ลัดเริ่มต้น
         initDefaultHotkeys();
 
-        // 2. สร้างส่วนประกอบหลัก
         dragHandle = new Label("⣿");
-        dragHandle.setTextFill(Color.web("#555555"));
-        dragHandle.setStyle("-fx-font-size: 18px; -fx-cursor: move;");
+        // dragHandle สไตล์จะถูกตั้งค่าใน buildLayout ตามธีม
         
         rotateBtn = new ActionButton("🔄", 
             "-fx-background-color: transparent; -fx-text-fill: #999999; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 20;",
@@ -88,11 +83,10 @@ public class ToolBar extends VBox {
                 toggleMode.setText("👁 View");
                 toggleMode.setActive(false);
                 canvas.setMouseTransparent(true);
-                Main.setDrawMode(true);
+                Main.setDrawMode(false);
             }
         });
 
-        // 3. สร้างปุ่มเครื่องมือ (ToolButtons)
         penBtn = new ToolButton("Pen", "pencil.png");
         highlightBtn = new ToolButton("Highlight", "highlighter.png");
         textBtn = new ToolButton("Text", "text_icon.png");
@@ -106,10 +100,8 @@ public class ToolBar extends VBox {
         textBtn.setOnAction(e -> { setActiveTool(textBtn); canvas.setTextMode(); });
         eraserBtn.setOnAction(e -> { setActiveTool(eraserBtn); canvas.setEraserMode(); });
 
-        // 4. ส่วนเลือกสีและขนาด
         colorLabel = new Label("Color");
-        colorLabel.setTextFill(Color.web("#FFFFFF"));
-        colorLabel.setStyle("-fx-font-size: 11px;");
+        sizeLabel = new Label("Size: 4");
 
         colorPicker = new ColorPicker(Color.web("#E91E63")); 
         colorPicker.setStyle("-fx-color-label-visible: false; -fx-background-color: #2b2b2b; -fx-background-radius: 20; -fx-cursor: hand;");
@@ -119,11 +111,6 @@ public class ToolBar extends VBox {
         });
         canvas.setBrushColor(colorPicker.getValue()); 
 
-        sizeLabel = new Label("Size: 4");
-        sizeLabel.setTextFill(Color.web("#FFFFFF"));
-        sizeLabel.setStyle("-fx-font-size: 11px;");
-        sizeLabel.setPrefWidth(45); 
-
         sizeSlider = new Slider(1, 100, 4);
         sizeSlider.setPrefWidth(80);
         sizeSlider.setStyle("-fx-cursor: hand;");
@@ -132,7 +119,6 @@ public class ToolBar extends VBox {
             sizeLabel.setText("Size: " + String.format("%.0f", newVal.doubleValue()));
         });
 
-        // 5. ปุ่มคำสั่ง (ActionButtons)
         undoBtn = new ActionButton("↩ Undo");
         undoBtn.setOnAction(e -> canvas.undo());
 
@@ -161,6 +147,16 @@ public class ToolBar extends VBox {
         closeBtn.setOnAction(e -> stage.close());
 
         buildLayout();
+    }
+
+    // 🌟 ฟังก์ชันสลับธีม
+    public void toggleTheme() {
+        this.isDarkMode = !isDarkMode;
+        buildLayout();
+    }
+
+    public boolean isDarkMode() {
+        return isDarkMode;
     }
 
     private void initDefaultHotkeys() {
@@ -207,15 +203,28 @@ public class ToolBar extends VBox {
             dragHandle.setPadding(new Insets(0, 0, 5, 0));
         }
 
+        // 🎨 กำหนด Palette สีตามธีม
+        String bgColor = isDarkMode ? "#1a1a1a" : "#ffffff";
+        String borderColor = isDarkMode ? "#333333" : "#dddddd";
+        String textColor = isDarkMode ? "white" : "#333333";
+        String shadowColor = isDarkMode ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.15)";
+
         container.setPadding(new Insets(8, 14, 8, 14));
         container.setStyle(
-                "-fx-background-color: #1a1a1a;"
+                "-fx-background-color: " + bgColor + ";"
                 + "-fx-background-radius: 30;"
-                + "-fx-border-color: #333333;"
+                + "-fx-border-color: " + borderColor + ";"
                 + "-fx-border-radius: 30;"
                 + "-fx-border-width: 1;"
-                + "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 12, 0, 0, 6);"
+                + "-fx-effect: dropshadow(gaussian, " + shadowColor + ", 12, 0, 0, 6);"
         );
+
+        // ปรับสี Text และ Label
+        colorLabel.setTextFill(Color.web(textColor));
+        colorLabel.setStyle("-fx-font-size: 11px;");
+        sizeLabel.setTextFill(Color.web(textColor));
+        sizeLabel.setStyle("-fx-font-size: 11px;");
+        dragHandle.setTextFill(Color.web(isDarkMode ? "#555555" : "#aaaaaa"));
 
         container.setOnMousePressed(e -> {
             xOffset = e.getSceneX() - this.getLayoutX();
@@ -226,6 +235,7 @@ public class ToolBar extends VBox {
             this.setLayoutY(e.getSceneY() - yOffset);
         });
 
+        container.getChildren().clear();
         container.getChildren().addAll(
                 dragHandle, rotateBtn, getStyledSeparator(sepOrientation),
                 toggleMode, getStyledSeparator(sepOrientation),
@@ -241,21 +251,19 @@ public class ToolBar extends VBox {
 
     private Separator getStyledSeparator(Orientation orientation) {
         Separator sep = new Separator(orientation);
-        sep.setStyle("-fx-opacity: 0.15; -fx-background-color: #ffffff;"); 
+        // ปรับความชัดของเส้นคั่นตามธีม
+        String sepColor = isDarkMode ? "#ffffff" : "#000000";
+        sep.setStyle("-fx-opacity: 0.15; -fx-background-color: " + sepColor + ";"); 
         return sep;
     }
 
     public void setupShortcuts(Scene scene) {
         scene.setOnKeyPressed(e -> {
-            // ถ้ากำลังพิมพ์ในกล่องข้อความ ให้หยุดคีย์ลัด
             if (e.getTarget() instanceof TextInputControl) return;
-            
-            // ถ้าหน้าต่างหลัก (Scene) ไม่ได้ถูก Focus อยู่ ก็ไม่ต้องทำงาน
             if (!scene.getWindow().isFocused()) return;
 
             KeyCode code = e.getCode();
             
-            // ใช้ if-else เช็คปุ่มจาก Map เหมือนเดิม
             if (code == hotkeys.get("PEN")) penBtn.fire();
             else if (code == hotkeys.get("HIGHLIGHT")) highlightBtn.fire();
             else if (code == hotkeys.get("TEXT")) textBtn.fire();
