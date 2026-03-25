@@ -3,9 +3,12 @@ package com.easypencil;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import javafx.scene.Cursor;
+import javafx.scene.ImageCursor;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -31,6 +34,12 @@ public class DrawingCanvas extends Pane {
     private double dragOffsetX = 0;
     private double dragOffsetY = 0;
 
+    // 🌟 ตัวแปรสำหรับเก็บรูปเมาส์ (Cursors) 🌟
+    private Cursor penCursor = Cursor.DEFAULT;
+    private Cursor highlightCursor = Cursor.DEFAULT;
+    private Cursor eraserCursor = Cursor.DEFAULT;
+    private Cursor textCursor = Cursor.TEXT; // ใช้เมาส์พิมพ์ข้อความแบบมาตรฐานของระบบ
+
     public DrawingCanvas() {
         double w = javafx.stage.Screen.getPrimary().getBounds().getWidth();
         double h = javafx.stage.Screen.getPrimary().getBounds().getHeight();
@@ -44,7 +53,32 @@ public class DrawingCanvas extends Pane {
         canvas.setMouseTransparent(false);
 
         getChildren().add(canvas);
+        
+        loadCursors(); // 🌟 โหลดรูปเมาส์ตอนเปิดโปรแกรม
         setupMouseEvents();
+    }
+
+    // 🌟 ฟังก์ชันสำหรับโหลดรูปลงมาเป็นเมาส์ 🌟
+    private void loadCursors() {
+        try {
+            Image penImg = new Image("file:app/src/main/resources/asset/pencil.png");
+            penCursor = new ImageCursor(penImg, 0, 512); 
+            
+            Image highlightImg = new Image("file:app/src/main/resources/asset/highlighter.png");
+            highlightCursor = new ImageCursor(highlightImg, 0, 512);
+
+            Image textImg = new Image("file:app/src/main/resources/asset/text_icon.png");
+            textCursor = new ImageCursor(textImg, 0, 0);
+            
+            Image eraserImg = new Image("file:app/src/main/resources/asset/eraser.png");
+            eraserCursor = new ImageCursor(eraserImg, eraserImg.getWidth() / 2, eraserImg.getHeight() / 2);
+
+        } catch (Exception e) {
+            System.out.println("Error Loading Cursors! Using default.");
+            penCursor = Cursor.CROSSHAIR;
+            highlightCursor = Cursor.CROSSHAIR;
+            eraserCursor = Cursor.CLOSED_HAND;
+        }
     }
 
     private void setupMouseEvents() {
@@ -73,14 +107,13 @@ public class DrawingCanvas extends Pane {
             
             gc.beginPath();
             gc.moveTo(e.getX(), e.getY());
-            gc.stroke(); // วาดจุดแรกตอนคลิก
+            gc.stroke(); 
         });
 
         canvas.setOnMouseDragged(e -> {
             if (textMode) return; 
 
             if (eraser) {
-                // บังคับให้ Alpha เป็น 1.0 เสมอก่อนลบ ป้องกันบัคลบไม่สะอาด
                 gc.setGlobalAlpha(1.0);
                 gc.clearRect(
                         e.getX() - brushSize * 2,
@@ -88,12 +121,9 @@ public class DrawingCanvas extends Pane {
                         brushSize * 4, brushSize * 4);
             } else {
                 gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-                
-                // 🌟 หัวใจสำคัญแก้บัคภาพหาย: คืนค่า Alpha เป็น 1.0 ก่อนวาดภาพ Snapshot เก่ากลับมา 🌟
                 gc.setGlobalAlpha(1.0);
                 gc.drawImage(undoStack.peek(), 0, 0);
 
-                // 🌟 ตั้งค่า Alpha กลับไปเป็น 40% เฉพาะตอนวาดเส้นไฮไลท์ใหม่ทับลงไป 🌟
                 if (highlightMode) {
                     gc.setGlobalAlpha(0.4);
                 }
@@ -208,10 +238,12 @@ public class DrawingCanvas extends Pane {
         }
     }
 
+    // 🌟 อัปเดตฟังก์ชันเหล่านี้ให้สั่งเปลี่ยนเมาส์ด้วย 🌟
     public void setPenMode() {
         this.textMode = false;
         this.eraser = false;
         this.highlightMode = false;
+        this.setCursor(penCursor); // เปลี่ยนรูปเมาส์
         if (activeTextContainer != null) finalizeText();
     }
 
@@ -219,6 +251,7 @@ public class DrawingCanvas extends Pane {
         this.textMode = false;
         this.eraser = false;
         this.highlightMode = true;
+        this.setCursor(highlightCursor); // เปลี่ยนรูปเมาส์
         if (activeTextContainer != null) finalizeText();
     }
 
@@ -226,19 +259,21 @@ public class DrawingCanvas extends Pane {
         this.textMode = true;
         this.eraser = false;
         this.highlightMode = false;
+        this.setCursor(textCursor); // เปลี่ยนรูปเมาส์ (ใช้แบบพิมพ์ข้อความมาตรฐาน)
     }
 
     public void setEraserMode() {
         this.textMode = false;
         this.eraser = true;
         this.highlightMode = false;
+        this.setCursor(eraserCursor); // เปลี่ยนรูปเมาส์
         if (activeTextContainer != null) finalizeText();
     }
 
     public void undo() {
         if (!undoStack.isEmpty()) {
             gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-            gc.setGlobalAlpha(1.0); // 🌟 กันภาพจางเวลาย้อนกลับ (Undo) หลังจากใช้ไฮไลท์
+            gc.setGlobalAlpha(1.0); 
             gc.drawImage(undoStack.pop(), 0, 0);
         }
     }
