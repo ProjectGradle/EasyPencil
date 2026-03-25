@@ -3,6 +3,7 @@ package com.easypencil;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
@@ -20,6 +21,9 @@ public class DrawingCanvas extends Pane {
     private Color brushColor = Color.RED;
     private double brushSize = 4.0;
     private boolean eraser = false;
+
+    private boolean textMode = false;
+    private javafx.scene.control.TextArea activeTextArea = null;
 
     public DrawingCanvas() {
         double w = javafx.stage.Screen.getPrimary().getBounds().getWidth();
@@ -40,15 +44,25 @@ public class DrawingCanvas extends Pane {
 
     private void setupMouseEvents() {
         canvas.setOnMousePressed(e -> {
+            if (textMode) {
+                if (activeTextArea != null) {
+                    finalizeText();
+                    return; 
+                }
+                createTextArea(e.getX(), e.getY());
+                return;
+            }
+
             saveSnapshot();
             gc.setStroke(brushColor);
             gc.setLineWidth(brushSize);
             gc.beginPath();
             gc.moveTo(e.getX(), e.getY());
-            System.out.println("Mouse pressed: " + e.getX() + ", " + e.getY());
         });
 
         canvas.setOnMouseDragged(e -> {
+            if (textMode) return; 
+
             if (eraser) {
                 gc.clearRect(
                         e.getX() - brushSize * 2,
@@ -62,17 +76,95 @@ public class DrawingCanvas extends Pane {
                 gc.beginPath();
                 gc.moveTo(e.getX(), e.getY());
             }
-            System.out.println("Mouse dragged: " + e.getX() + ", " + e.getY());
         });
 
-        canvas.setOnMouseReleased(e -> gc.closePath());
+        canvas.setOnMouseReleased(e -> {
+            if (!textMode) {
+                gc.closePath();
+            }
+        });
     }
 
     private void saveSnapshot() {
-        WritableImage snapshot = canvas.snapshot(null, null);
+        SnapshotParameters params = new SnapshotParameters();
+        params.setFill(Color.TRANSPARENT); 
+        WritableImage snapshot = canvas.snapshot(params, null);
         undoStack.push(snapshot);
         if (undoStack.size() > 30) {
             undoStack.pollLast();
+        }
+    }
+
+    private void createTextArea(double x, double y) {
+        activeTextArea = new javafx.scene.control.TextArea();
+        activeTextArea.setLayoutX(x);
+        activeTextArea.setLayoutY(y - 10); 
+        
+        activeTextArea.setWrapText(false); 
+
+        String hexColor = String.format("#%02X%02X%02X",
+                (int) (brushColor.getRed() * 255),
+                (int) (brushColor.getGreen() * 255),
+                (int) (brushColor.getBlue() * 255));
+
+        double fontSize = Math.max(16, brushSize * 4);
+
+        activeTextArea.setStyle(
+                "-fx-control-inner-background: rgba(255,255,255,0.8); " +
+                "-fx-background-color: transparent; " +
+                "-fx-text-fill: " + hexColor + "; " +
+                "-fx-font-size: " + fontSize + "px; " +
+                "-fx-border-color: #888; -fx-border-style: dashed;"
+        );
+
+        javafx.scene.text.Text textMeasurer = new javafx.scene.text.Text();
+        textMeasurer.setFont(javafx.scene.text.Font.font("System", fontSize));
+
+        double initialWidth = fontSize * 3;
+        double initialHeight = fontSize * 2.5;
+        activeTextArea.setPrefWidth(initialWidth);
+        activeTextArea.setPrefHeight(initialHeight);
+
+        activeTextArea.textProperty().addListener((obs, oldText, newText) -> {
+            textMeasurer.setText(newText.isEmpty() ? "A" : newText);
+            double newWidth = textMeasurer.getLayoutBounds().getWidth() + 35;
+            double newHeight = textMeasurer.getLayoutBounds().getHeight() + 25;
+            activeTextArea.setPrefWidth(Math.max(initialWidth, newWidth));
+            activeTextArea.setPrefHeight(Math.max(initialHeight, newHeight));
+        });
+
+        activeTextArea.setOnKeyPressed(e -> {
+            if (e.isControlDown() && e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                finalizeText();
+            }
+        });
+
+        this.getChildren().add(activeTextArea);
+        activeTextArea.requestFocus();
+    }
+
+    private void finalizeText() {
+        if (activeTextArea != null && !activeTextArea.getText().trim().isEmpty()) {
+            saveSnapshot(); 
+            gc.setFill(brushColor);
+            double fontSize = Math.max(16, brushSize * 4);
+            gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, fontSize));
+            
+            gc.fillText(activeTextArea.getText(), activeTextArea.getLayoutX() + 5, activeTextArea.getLayoutY() + fontSize);
+        }
+        
+        if (activeTextArea != null) {
+            this.getChildren().remove(activeTextArea);
+            activeTextArea = null;
+        }
+    }
+
+    public void setTextMode(boolean isText) {
+        this.textMode = isText;
+        if (isText) {
+            this.eraser = false;
+        } else if (activeTextArea != null) {
+            finalizeText(); 
         }
     }
 

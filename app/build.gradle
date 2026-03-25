@@ -18,6 +18,7 @@ dependencies {
 
     implementation 'net.java.dev.jna:jna:5.14.0'
     implementation 'net.java.dev.jna:jna-platform:5.14.0'
+    implementation 'org.openjfx:javafx-swing:21.0.1'
 }
 
 java {
