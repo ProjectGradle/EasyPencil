@@ -88,7 +88,7 @@ public class ToolBar extends VBox {
                 toggleMode.setText("👁 View");
                 toggleMode.setActive(false);
                 canvas.setMouseTransparent(true);
-                Main.setDrawMode(false);
+                Main.setDrawMode(true);
             }
         });
 
