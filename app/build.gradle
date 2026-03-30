@@ -28,8 +28,100 @@ java {
 
 application {
     mainClass = 'com.easypencil.Main'
+    applicationDefaultJvmArgs = [
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.desktop/sun.awt=ALL-UNNAMED'
+    ]
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// ─── Windows EXE via jpackage (classpath + module-path split) ──────────────
+//
+// Strategy:
+//   JavaFX JARs  → --module-path  (proper modules, jlink-compatible)
+//   App JAR + JNA → --input        (classpath / unnamed module, avoids
+//                                   "automatic module" jlink restriction)
+//
+// Usage:
+//   gradlew packageExe              → app-image folder (no WiX needed)
+//   gradlew packageExe -Ptype=exe   → .exe installer   (needs WiX 3.x)
+//   gradlew packageExe -Ptype=msi   → .msi installer   (needs WiX 3.x)
+//
+// WiX: https://github.com/wixtoolset/wix3/releases
+// Output: app/build/jpackage/
+//
+
+// Collect JavaFX JARs (proper modules) into build/javafx-mods/
+task copyJfxMods(type: Copy) {
+    group = 'distribution'
+    from configurations.runtimeClasspath.filter { f -> f.name.contains('javafx') }
+    into layout.buildDirectory.dir('javafx-mods')
+    includeEmptyDirs = false
+}
+
+// Collect app JAR + non-JavaFX deps into build/app-libs/
+task copyAppLibs(type: Copy, dependsOn: jar) {
+    group = 'distribution'
+    from jar.archiveFile
+    from configurations.runtimeClasspath.filter { f -> !f.name.contains('javafx') }
+    into layout.buildDirectory.dir('app-libs')
+    includeEmptyDirs = false
+}
+
+task packageExe(dependsOn: [copyJfxMods, copyAppLibs]) {
+    group       = 'distribution'
+    description = 'Creates a Windows EXE / app-image using jpackage (JDK 17+)'
+
+    doLast {
+        def javaExe  = javaToolchains
+                .launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+                .get().executablePath.asFile
+        def jpackage = new File(javaExe.parentFile, 'jpackage.exe').absolutePath
+
+        def jfxDir   = layout.buildDirectory.dir('javafx-mods').get().asFile.absolutePath
+        def libsDir  = layout.buildDirectory.dir('app-libs').get().asFile.absolutePath
+        def appJar   = jar.archiveFileName.get()
+
+        def outDir   = layout.buildDirectory.dir('jpackage').get().asFile
+        if (outDir.exists()) outDir.deleteDir()
+        outDir.mkdirs()
+
+        def pkgType  = (project.findProperty('type') ?: 'app-image').toString()
+
+        List<String> args = [
+            jpackage.toString(),
+            '--type',         pkgType,
+            '--name',         'EasyPencil',
+            '--app-version',  '1.0.0',
+            '--module-path',  jfxDir,          // JavaFX proper modules
+            '--add-modules',  'javafx.controls,javafx.graphics',
+            '--input',        libsDir,          // app JAR + JNA on classpath
+            '--main-jar',     appJar,
+            '--main-class',   'com.easypencil.Main',
+            '--dest',         outDir.absolutePath,
+            '--description',  'EasyPencil \u2014 Screen Annotation Tool',
+            '--vendor',       'EasyPencil',
+            '--java-options', '--add-modules javafx.controls,javafx.graphics',
+            '--java-options', '--add-opens java.base/java.lang=ALL-UNNAMED',
+            '--java-options', '--add-opens java.desktop/sun.awt=ALL-UNNAMED',
+        ]
+
+        if (pkgType != 'app-image') {
+            args.addAll(['--win-shortcut', '--win-menu', '--win-dir-chooser'])
+        }
+
+        println "Running: ${args.join(' ')}\n"
+
+        def proc = new ProcessBuilder(args)
+                .redirectErrorStream(true)
+                .start()
+        proc.inputStream.eachLine { line -> println line }
+        def exit = proc.waitFor()
+        if (exit != 0) throw new GradleException("jpackage exited with code ${exit}")
+
+        println "\n✔ Output: ${outDir.absolutePath}"
+    }
 }

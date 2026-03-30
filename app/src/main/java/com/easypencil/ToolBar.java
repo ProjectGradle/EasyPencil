@@ -39,25 +39,44 @@ public class ToolBar extends VBox {
     private ActionButton rotateBtn;
     private ToolButton toggleMode;
 
+    // Drawing tools
     private ToolButton penBtn;
     private ToolButton highlightBtn;
     private ToolButton textBtn;
     private ToolButton eraserBtn;
 
+    // Shape tools
+    private ToolButton lineBtn;
+    private ToolButton rectBtn;
+    private ToolButton circleBtn;
+    private ToolButton triangleBtn;
+
+    // Action buttons
     private ActionButton undoBtn;
     private ActionButton clearBtn;
     private ActionButton saveBtn;
     private ActionButton settingsBtn;
     private ActionButton closeBtn;
 
+    // Color & size
     private Label colorLabel;
     private ColorPicker colorPicker;
     private Label sizeLabel;
     private Slider sizeSlider;
 
+    // Zoom controls
+    private ActionButton zoomOutBtn;
+    private ActionButton zoomInBtn;
+    private ActionButton zoomResetBtn;
+    private Label zoomLabel;
+
     private final Map<String, KeyCode> hotkeys = new HashMap<>();
 
+    // Keep reference to canvas for zoom callbacks
+    private final DrawingCanvas canvas;
+
     public ToolBar(DrawingCanvas canvas, Stage stage) {
+        this.canvas = canvas;
         setAlignment(Pos.TOP_LEFT);
         setPickOnBounds(false);
         setPadding(new Insets(15));
@@ -77,7 +96,6 @@ public class ToolBar extends VBox {
         toggleMode = new ToolButton("✏ Draw", null);
         toggleMode.setOnAction(e -> {
             Pane rootPane = (Pane) canvas.getParent();
-
             if (toggleMode.isSelected()) {
                 toggleMode.setText("✏ Draw");
                 toggleMode.setActive(true);
@@ -95,41 +113,46 @@ public class ToolBar extends VBox {
             }
         });
 
-        penBtn = new ToolButton("Pen", "pencil.png");
+        // ── Drawing tools ─────────────────────────────────────────────────
+        penBtn       = new ToolButton("Pen",       "pencil.png");
         highlightBtn = new ToolButton("Highlight", "highlighter.png");
-        textBtn = new ToolButton("Text", "text_icon.png");
-        eraserBtn = new ToolButton("Eraser", "eraser.png");
+        textBtn      = new ToolButton("Text",      "text_icon.png");
+        eraserBtn    = new ToolButton("Eraser",    "eraser.png");
+
+        penBtn.setOnAction(e -> { setActiveTool(penBtn); canvas.setPenMode(); });
+        highlightBtn.setOnAction(e -> { setActiveTool(highlightBtn); canvas.setHighlightMode(); });
+        textBtn.setOnAction(e -> { setActiveTool(textBtn); canvas.setTextMode(); });
+        eraserBtn.setOnAction(e -> { setActiveTool(eraserBtn); canvas.setEraserMode(); });
+
+        // ── Shape tools ───────────────────────────────────────────────────
+        lineBtn     = new ToolButton("Line",     null);
+        rectBtn     = new ToolButton("Rect",     null);
+        circleBtn   = new ToolButton("Circle",   null);
+        triangleBtn = new ToolButton("Triangle", null);
+
+        // Use emoji text labels for shape buttons since there are no icons
+        lineBtn.setText("╱");
+        rectBtn.setText("▭");
+        circleBtn.setText("○");
+        triangleBtn.setText("△");
+
+        lineBtn.setOnAction(e -> { setActiveTool(lineBtn); canvas.setLineMode(); });
+        rectBtn.setOnAction(e -> { setActiveTool(rectBtn); canvas.setRectMode(); });
+        circleBtn.setOnAction(e -> { setActiveTool(circleBtn); canvas.setCircleMode(); });
+        triangleBtn.setOnAction(e -> { setActiveTool(triangleBtn); canvas.setTriangleMode(); });
 
         setActiveTool(penBtn);
         canvas.setPenMode();
 
-        penBtn.setOnAction(e -> {
-            setActiveTool(penBtn);
-            canvas.setPenMode();
-        });
-        highlightBtn.setOnAction(e -> {
-            setActiveTool(highlightBtn);
-            canvas.setHighlightMode();
-        });
-        textBtn.setOnAction(e -> {
-            setActiveTool(textBtn);
-            canvas.setTextMode();
-        });
-        eraserBtn.setOnAction(e -> {
-            setActiveTool(eraserBtn);
-            canvas.setEraserMode();
-        });
-
+        // ── Color & Size ─────────────────────────────────────────────────
         colorLabel = new Label("Color");
-        sizeLabel = new Label("Size: 4");
+        sizeLabel  = new Label("Size: 4");
 
         colorPicker = new ColorPicker(Color.web("#E91E63"));
         colorPicker.setStyle("-fx-color-label-visible: false; -fx-background-color: #2b2b2b; -fx-background-radius: 20; -fx-cursor: hand;");
         colorPicker.setOnAction(e -> {
             canvas.setBrushColor(colorPicker.getValue());
-            if (canvas.isEraser()) {
-                penBtn.fire();
-            }
+            if (canvas.isEraser()) penBtn.fire();
         });
         canvas.setBrushColor(colorPicker.getValue());
 
@@ -141,6 +164,7 @@ public class ToolBar extends VBox {
             sizeLabel.setText("Size: " + String.format("%.0f", newVal.doubleValue()));
         });
 
+        // ── Action buttons ───────────────────────────────────────────────
         undoBtn = new ActionButton("↩ Undo");
         undoBtn.setOnAction(e -> canvas.undo());
 
@@ -155,20 +179,13 @@ public class ToolBar extends VBox {
             fileChooser.setInitialFileName("EasyPencil_" + timestamp + ".png");
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Files", "*.png"));
             File userDirectory = new File(System.getProperty("user.home"));
-            if (userDirectory.exists()) {
-                fileChooser.setInitialDirectory(userDirectory);
-            }
+            if (userDirectory.exists()) fileChooser.setInitialDirectory(userDirectory);
             File file = fileChooser.showSaveDialog(stage);
-            if (file != null) {
-                canvas.saveAsPng(file);
-            }
+            if (file != null) canvas.saveAsPng(file);
         });
 
         settingsBtn = new ActionButton("⚙");
-        settingsBtn.setOnAction(e -> {
-            HotkeySettings settingsWindow = new HotkeySettings(this);
-            settingsWindow.showAndWait();
-        });
+        settingsBtn.setOnAction(e -> new HotkeySettings(this).showAndWait());
 
         closeBtn = new ActionButton("✕",
                 "-fx-background-color: transparent; -fx-text-fill: #ff4d4d; -fx-background-radius: 20; -fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 6 12;",
@@ -176,7 +193,22 @@ public class ToolBar extends VBox {
         );
         closeBtn.setOnAction(e -> stage.close());
 
+        // ── Zoom controls ─────────────────────────────────────────────────
+        zoomOutBtn   = new ActionButton("🔍-");
+        zoomInBtn    = new ActionButton("🔍+");
+        zoomResetBtn = new ActionButton("1:1");
+        zoomLabel    = new Label("100%");
+
+        zoomOutBtn.setOnAction(e -> { canvas.zoomOut(); updateZoomLabel(); });
+        zoomInBtn.setOnAction(e -> { canvas.zoomIn(); updateZoomLabel(); });
+        zoomResetBtn.setOnAction(e -> { canvas.resetZoom(); updateZoomLabel(); });
+
         buildLayout();
+    }
+
+    private void updateZoomLabel() {
+        int pct = (int) Math.round(canvas.getZoomLevel() * 100);
+        zoomLabel.setText(pct + "%");
     }
 
     public void toggleTheme() {
@@ -189,12 +221,16 @@ public class ToolBar extends VBox {
     }
 
     private void initDefaultHotkeys() {
-        hotkeys.put("PEN", KeyCode.P);
-        hotkeys.put("HIGHLIGHT", KeyCode.H);
-        hotkeys.put("TEXT", KeyCode.T);
-        hotkeys.put("ERASER", KeyCode.E);
-        hotkeys.put("UNDO", KeyCode.Z);
-        hotkeys.put("SAVE", KeyCode.S);
+        hotkeys.put("PEN",      KeyCode.P);
+        hotkeys.put("HIGHLIGHT",KeyCode.H);
+        hotkeys.put("TEXT",     KeyCode.T);
+        hotkeys.put("ERASER",   KeyCode.E);
+        hotkeys.put("LINE",     KeyCode.L);
+        hotkeys.put("RECT",     KeyCode.R);
+        hotkeys.put("CIRCLE",   KeyCode.C);
+        hotkeys.put("TRIANGLE", KeyCode.G);
+        hotkeys.put("UNDO",     KeyCode.Z);
+        hotkeys.put("SAVE",     KeyCode.S);
     }
 
     public void setHotkey(String toolName, KeyCode newKey) {
@@ -206,7 +242,8 @@ public class ToolBar extends VBox {
     }
 
     private void setActiveTool(ToolButton activeBtn) {
-        ToolButton[] tools = {penBtn, highlightBtn, textBtn, eraserBtn};
+        ToolButton[] tools = {penBtn, highlightBtn, textBtn, eraserBtn,
+                              lineBtn, rectBtn, circleBtn, triangleBtn};
         for (ToolButton btn : tools) {
             btn.setActive(btn == activeBtn);
         }
@@ -232,9 +269,9 @@ public class ToolBar extends VBox {
             dragHandle.setPadding(new Insets(0, 0, 5, 0));
         }
 
-        String bgColor = isDarkMode ? "#1a1a1a" : "#ffffff";
+        String bgColor     = isDarkMode ? "#1a1a1a" : "#ffffff";
         String borderColor = isDarkMode ? "#333333" : "#dddddd";
-        String textColor = isDarkMode ? "white" : "#333333";
+        String textColor   = isDarkMode ? "white"   : "#333333";
         String shadowColor = isDarkMode ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.15)";
 
         container.setPadding(new Insets(8, 14, 8, 14));
@@ -251,6 +288,8 @@ public class ToolBar extends VBox {
         colorLabel.setStyle("-fx-font-size: 11px;");
         sizeLabel.setTextFill(Color.web(textColor));
         sizeLabel.setStyle("-fx-font-size: 11px;");
+        zoomLabel.setTextFill(Color.web(textColor));
+        zoomLabel.setStyle("-fx-font-size: 11px; -fx-min-width: 36px; -fx-alignment: center;");
         dragHandle.setTextFill(Color.web(isDarkMode ? "#555555" : "#aaaaaa"));
 
         container.setOnMousePressed(e -> {
@@ -266,8 +305,15 @@ public class ToolBar extends VBox {
         container.getChildren().addAll(
                 dragHandle, rotateBtn, getStyledSeparator(sepOrientation),
                 toggleMode, getStyledSeparator(sepOrientation),
+                // Drawing tools
                 penBtn, highlightBtn, textBtn, eraserBtn, getStyledSeparator(sepOrientation),
+                // Shape tools
+                lineBtn, rectBtn, circleBtn, triangleBtn, getStyledSeparator(sepOrientation),
+                // Color & size
                 colorLabel, colorPicker, sizeLabel, sizeSlider, getStyledSeparator(sepOrientation),
+                // Zoom controls
+                zoomOutBtn, zoomLabel, zoomInBtn, zoomResetBtn, getStyledSeparator(sepOrientation),
+                // Actions
                 undoBtn, clearBtn, saveBtn, settingsBtn, getStyledSeparator(sepOrientation),
                 closeBtn
         );
@@ -285,31 +331,47 @@ public class ToolBar extends VBox {
 
     public void setupShortcuts(Scene scene) {
         scene.setOnKeyPressed(e -> {
-            if (e.getTarget() instanceof TextInputControl) {
-                return;
-            }
-            if (!scene.getWindow().isFocused()) {
-                return;
-            }
+            if (e.getTarget() instanceof TextInputControl) return;
+            if (!scene.getWindow().isFocused()) return;
 
             KeyCode code = e.getCode();
 
-            if (code == hotkeys.get("PEN")) {
-                penBtn.fire();
-            } else if (code == hotkeys.get("HIGHLIGHT")) {
-                highlightBtn.fire();
-            } else if (code == hotkeys.get("TEXT")) {
-                textBtn.fire();
-            } else if (code == hotkeys.get("ERASER")) {
-                eraserBtn.fire();
+            // Tool hotkeys (no modifier)
+            if (!e.isControlDown()) {
+                if      (code == hotkeys.get("PEN"))      penBtn.fire();
+                else if (code == hotkeys.get("HIGHLIGHT")) highlightBtn.fire();
+                else if (code == hotkeys.get("TEXT"))      textBtn.fire();
+                else if (code == hotkeys.get("ERASER"))    eraserBtn.fire();
+                else if (code == hotkeys.get("LINE"))      lineBtn.fire();
+                else if (code == hotkeys.get("RECT"))      rectBtn.fire();
+                else if (code == hotkeys.get("CIRCLE"))    circleBtn.fire();
+                else if (code == hotkeys.get("TRIANGLE"))  triangleBtn.fire();
             }
 
+            // Ctrl shortcuts
             if (e.isControlDown()) {
-                if (code == hotkeys.get("UNDO")) {
-                    undoBtn.fire();
-                } else if (code == hotkeys.get("SAVE")) {
-                    saveBtn.fire();
+                if      (code == hotkeys.get("UNDO"))  undoBtn.fire();
+                else if (code == hotkeys.get("SAVE"))  saveBtn.fire();
+                else if (code == KeyCode.EQUALS || code == KeyCode.ADD) {
+                    canvas.zoomIn();
+                    updateZoomLabel();
+                } else if (code == KeyCode.MINUS || code == KeyCode.SUBTRACT) {
+                    canvas.zoomOut();
+                    updateZoomLabel();
+                } else if (code == KeyCode.DIGIT0 || code == KeyCode.NUMPAD0) {
+                    canvas.resetZoom();
+                    updateZoomLabel();
                 }
+            }
+        });
+
+        // Ctrl+Scroll to zoom
+        scene.setOnScroll(e -> {
+            if (e.isControlDown()) {
+                if (e.getDeltaY() > 0) canvas.zoomIn();
+                else                   canvas.zoomOut();
+                updateZoomLabel();
+                e.consume();
             }
         });
     }
