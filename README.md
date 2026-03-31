@@ -9,14 +9,17 @@ Lightweight 2D pencil drawing tool built with Java, LWJGL, and OpenGL
 
 ### 📥 การติดตั้ง (Installation)
 
-<p align="center">
-  <a href="Installer/EasyPencil_Setup.exe?raw=true">
-    <img src="https://img.shields.io/badge/Download-EasyPencil_Installer-blue?style=for-the-badge&logo=windows" alt="Download EasyPencil">
+<div align="center">
+  <br>
+  <a href="https://github.com/ProjectGradle/EasyPencil/releases/download/Installer/EasyPencil_Setup.exe">
+    <img src="https://img.shields.io/static/v1?label=&message=DOWNLOAD&color=2ea44f&style=for-the-badge&logo=windows&logoColor=white" height="45"/>
   </a>
-</p>
+  <br>
+  <br>
+</div>
 
 <p align="center">
-  <i>คลิกที่ปุ่มด้านบนเพื่อดาวน์โหลดตัวติดตั้ง (.exe)</i>
+  <sub>คลิกที่ปุ่มสีเขียวด้านบนเพื่อดาวน์โหลดตัวติดตั้ง (.exe)</sub>
 </p>
 
 ## Install Environment (สำหรับ Developer)
