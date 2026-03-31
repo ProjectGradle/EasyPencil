@@ -11,7 +11,7 @@ Lightweight 2D pencil drawing tool built with Java, LWJGL, and OpenGL
 
 คลิกที่ลิงก์ด้านล่างเพื่อดาวน์โหลดตัวติดตั้ง:
 
-* **[⬇️ Download EasyPencil Installer (.exe)](Installer/EasyPencil_Setup.exe?raw=true)**
+**[⬇️ Download EasyPencil Installer (.exe)](Installer/EasyPencil_Setup.exe?raw=true)**
 
 ---
 > **หมายเหตุ:** หากเบราว์เซอร์แจ้งเตือนว่าเป็นไฟล์ที่ไม่ปลอดภัย ให้เลือก "Keep" หรือ "Run anyway" เนื่องจากเป็นไฟล์ .exe ที่สร้างขึ้นเองและยังไม่ได้เซ็นชื่อดิจิทัล (Digital Signature)
