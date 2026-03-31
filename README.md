@@ -11,7 +11,7 @@ Lightweight 2D pencil drawing tool built with Java, LWJGL, and OpenGL
 
 > ดาวน์โหลดและติดตั้งได้ทันที ไม่ต้องติดตั้ง Java หรือ dependencies เพิ่มเติม
 
-**[⬇ Download EasyPencil Installer (.exe)](https://github.com/ProjectGradle/EasyPencil/blob/main/dist/launcher.exe)**
+<a href="Installer/EasyPencil_Setup.exe?raw=true">Download</a>
 
 - รองรับ Windows 10 / 11
 - ตัวติดตั้งจะแตกไฟล์และสร้าง Shortcut บน Desktop ให้อัตโนมัติ
